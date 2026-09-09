@@ -29,7 +29,6 @@ class IntroPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final addMultiAccount = Matrix.of(
       context,
     ).widget.clients.any((client) => client.isLogged());
@@ -144,14 +143,13 @@ class IntroPage extends StatelessWidget {
                               mainAxisSize: .min,
                               crossAxisAlignment: .stretch,
                               children: [
-                                if (!hasPresetHomeserver)
-                                  ElevatedButton(
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          theme.colorScheme.secondary,
-                                      foregroundColor:
-                                          theme.colorScheme.onSecondary,
-                                    ),
+                                FilledButton(
+                                  onPressed: login,
+                                  child: Text(L10n.of(context).signIn),
+                                ),
+                                if (!hasPresetHomeserver) ...[
+                                  SizedBox(height: 16),
+                                  OutlinedButton(
                                     onPressed: () => context.go(
                                       '${GoRouterState.of(context).uri.path}/sign_up',
                                     ),
@@ -159,11 +157,7 @@ class IntroPage extends StatelessWidget {
                                       L10n.of(context).createNewAccount,
                                     ),
                                   ),
-                                SizedBox(height: 16),
-                                ElevatedButton(
-                                  onPressed: login,
-                                  child: Text(L10n.of(context).signIn),
-                                ),
+                                ],
 
                                 if (!hasPresetHomeserver)
                                   TextButton(

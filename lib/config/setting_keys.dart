@@ -27,10 +27,7 @@ enum AppSettings<T> {
   showNoGoogle<bool>('chat.fluffy.show_no_google', false),
   unifiedPushRegistered<bool>('chat.fluffy.unifiedpush.registered', false),
   unifiedPushEndpoint<String>('chat.fluffy.unifiedpush.endpoint', ''),
-  pushNotificationsGatewayUrl<String>(
-    'pushNotificationsGatewayUrl',
-    'https://push.fluffychat.im/_matrix/push/v1/notify',
-  ),
+  pushNotificationsGatewayUrl<String>('pushNotificationsGatewayUrl', ''),
   pushNotificationsPusherFormat<String>(
     'pushNotificationsPusherFormat',
     'event_id_only',
@@ -52,25 +49,25 @@ enum AppSettings<T> {
   ),
   displayChatDetailsColumn('chat.fluffy.display_chat_details_column', false),
   // AppConfig-mirrored settings
-  applicationName<String>('chat.fluffy.application_name', 'FluffyChat'),
+  applicationName<String>('chat.fluffy.application_name', 'IMFxTech Chat'),
   defaultHomeserver<String>('chat.fluffy.default_homeserver', 'matrix.org'),
   // colorSchemeSeed stored as ARGB int
-  colorSchemeSeedInt<int>('chat.fluffy.color_scheme_seed', 0xFF5625BA),
+  colorSchemeSeedInt<int>('chat.fluffy.color_scheme_seed', 0xFFD8A954),
   emojiSuggestionLocale<String>('emoji_suggestion_locale', ''),
   enableSoftLogout<bool>('chat.fluffy.enable_soft_logout', true),
   enableMatrixNativeOIDC<bool>('chat.fluffy.enable_matrix_native_oidc', true),
   presetHomeserver<String>('chat.fluffy.preset_homeserver', ''),
   welcomeText<String>('chat.fluffy.welcome_text', ''),
-  website<String>('chat.fluffy.website_url', 'https://fluffychat.im'),
-  logoUrl<String>(
-    'chat.fluffy.logo_url',
-    'https://fluffychat.im/assets/favicon.png',
+  website<String>(
+    'chat.fluffy.website_url',
+    'https://github.com/marcelofmatos/imfxtech-chat',
   ),
+  logoUrl<String>('chat.fluffy.logo_url', ''),
   privacyPolicy<String>(
     'chat.fluffy.privacy_policy_url',
-    'https://fluffychat.im/privacy',
+    'https://github.com/marcelofmatos/imfxtech-chat/blob/main/PRIVACY.md',
   ),
-  tos<String>('chat.fluffy.tos_url', 'https://fluffychat.im/tos'),
+  tos<String>('chat.fluffy.tos_url', ''),
   sendTimelineEventTimeout<int>('chat.fluffy.send_timeline_event_timeout', 15),
   webNotificationSound<bool>('chat.fluffy.web_notification_sound', true),
   chatFilter<String>('chat.fluffy.chat_filter', 'allChats'),

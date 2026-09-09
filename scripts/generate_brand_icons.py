@@ -88,9 +88,31 @@ def remove_old_background_pngs():
             print(f"removed {f}")
 
 
+MINI_LOGO_SIZE = 500
+
+
+def generate_mini_logo():
+    src = Image.open(APPLE_SRC).convert("RGB")
+    out = REPO / "assets/logo/mini/logo_mini.png"
+    resize(src, MINI_LOGO_SIZE).save(out)
+    print(f"mini logo: {MINI_LOGO_SIZE}x{MINI_LOGO_SIZE}")
+
+
+def generate_mini_logo_monochrome():
+    src = Image.open(ANDROID_FG_SRC).convert("RGBA")
+    alpha = src.getchannel("A")
+    white_silhouette = Image.new("RGBA", src.size, (255, 255, 255, 0))
+    white_silhouette.putalpha(alpha)
+    out = REPO / "assets/logo/mini/logo_mono_mini.png"
+    resize(white_silhouette, MINI_LOGO_SIZE).save(out)
+    print(f"mini logo monochrome: {MINI_LOGO_SIZE}x{MINI_LOGO_SIZE}")
+
+
 if __name__ == "__main__":
     generate_ios_icons()
     generate_android_legacy_icons()
     generate_android_foreground_icons()
     generate_android_monochrome_icons()
     remove_old_background_pngs()
+    generate_mini_logo()
+    generate_mini_logo_monochrome()
