@@ -35,26 +35,6 @@ abstract class UpdateNotifier {
             actions: [
               AdaptiveDialogAction(
                 bigButtons: true,
-                onPressed: () => launchUrlString(AppConfig.helpUrl),
-                child: Row(
-                  mainAxisSize: .min,
-                  spacing: 4,
-                  children: [
-                    Icon(
-                      Icons.favorite,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    Text(
-                      l10n.support,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              AdaptiveDialogAction(
-                bigButtons: true,
                 onPressed: () => launchUrlString(AppConfig.changelogUrl),
                 child: Text(l10n.changelog),
               ),
