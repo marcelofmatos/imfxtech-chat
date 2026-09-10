@@ -144,37 +144,18 @@ class IntroPage extends StatelessWidget {
                               crossAxisAlignment: .stretch,
                               children: [
                                 FilledButton(
-                                  onPressed: login,
+                                  onPressed: () async {
+                                    final client = await Matrix.of(
+                                      context,
+                                    ).getLoginClient();
+                                    if (!context.mounted) return;
+                                    context.go(
+                                      '${GoRouterState.of(context).uri.path}/login',
+                                      extra: client,
+                                    );
+                                  },
                                   child: Text(L10n.of(context).signIn),
                                 ),
-                                if (!hasPresetHomeserver) ...[
-                                  SizedBox(height: 16),
-                                  OutlinedButton(
-                                    onPressed: () => context.go(
-                                      '${GoRouterState.of(context).uri.path}/sign_up',
-                                    ),
-                                    child: Text(
-                                      L10n.of(context).createNewAccount,
-                                    ),
-                                  ),
-                                ],
-
-                                if (!hasPresetHomeserver)
-                                  TextButton(
-                                    onPressed: () async {
-                                      final client = await Matrix.of(
-                                        context,
-                                      ).getLoginClient();
-                                      if (!context.mounted) return;
-                                      context.go(
-                                        '${GoRouterState.of(context).uri.path}/login',
-                                        extra: client,
-                                      );
-                                    },
-                                    child: Text(
-                                      L10n.of(context).loginWithMatrixId,
-                                    ),
-                                  ),
                               ],
                             ),
                           ),

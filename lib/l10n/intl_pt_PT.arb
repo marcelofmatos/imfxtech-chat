@@ -2200,5 +2200,8 @@
     "@discardEdits": {
         "type": "String",
         "placeholders": {}
-    }
+    },
+    "appSubtitle": "Comunicação segura via Matrix",
+    "appDescription": "Mensagens criptografadas, descentralizadas e fáceis de usar.",
+    "signIn": "Conectar"
 }
