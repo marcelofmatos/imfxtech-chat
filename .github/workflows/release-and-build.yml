@@ -1,0 +1,148 @@
+name: Release and Build
+
+# Manually triggered: bumps the app version, tags it, and builds an Android
+# release APK (signed with our own keystore) and an unsigned iOS build,
+# publishing both as a GitHub Release.
+#
+# iOS is unsigned (--no-codesign) until we have an Apple Developer account and
+# a distribution certificate/provisioning profile — see TODO.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type"
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: release-and-build
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.bump.outputs.version }}
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Bump version
+        id: bump
+        env:
+          BUMP_KIND: ${{ inputs.bump }}
+        run: |
+          NEW_VERSION=$(python3 scripts/bump_version.py "$BUMP_KIND")
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NEW_VERSION" >> "$GITHUB_OUTPUT"
+      - name: Commit and tag
+        env:
+          NEW_VERSION: ${{ steps.bump.outputs.version }}
+          NEW_TAG: ${{ steps.bump.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml snap/snapcraft.yaml
+          git commit -m "chore: bump version to $NEW_VERSION"
+          git tag "$NEW_TAG"
+          git push origin HEAD:main
+          git push origin "$NEW_TAG"
+
+  build-android:
+    needs: bump-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.bump-version.outputs.tag }}
+      - uses: ./.github/actions/free_up_space
+        with:
+          target: android
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .tool_versions.yaml
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+      - run: flutter pub get
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/imfxtech-chat-release.keystore
+          cat > android/key.properties <<PROPS
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=imfxtech-chat-release.keystore
+          PROPS
+      - name: Build release APK
+        run: flutter build apk --release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: imfxtech-chat-android
+          path: build/app/outputs/apk/release/app-release.apk
+
+  build-ios:
+    needs: bump-version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.bump-version.outputs.tag }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .tool_versions.yaml
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+      - run: flutter pub get
+      - name: Build unsigned iOS app
+        run: flutter build ios --release --no-codesign
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p build/ios/ipa/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
+          cd build/ios/ipa
+          zip -r imfxtech-chat-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: imfxtech-chat-ios
+          path: build/ios/ipa/imfxtech-chat-unsigned.ipa
+
+  create-release:
+    needs: [bump-version, build-android, build-ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: imfxtech-chat-android
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: imfxtech-chat-ios
+          path: dist
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NEW_TAG: ${{ needs.bump-version.outputs.tag }}
+          NEW_VERSION: ${{ needs.bump-version.outputs.version }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh release create "$NEW_TAG" \
+            dist/app-release.apk \
+            dist/imfxtech-chat-unsigned.ipa \
+            --repo "$REPO" \
+            --title "IMFxTech Chat $NEW_VERSION" \
+            --generate-notes \
+            --notes "iOS build is unsigned (--no-codesign) — needs an Apple Developer certificate/provisioning profile to install on a real device. Android APK is signed with our release keystore and ready to install."
