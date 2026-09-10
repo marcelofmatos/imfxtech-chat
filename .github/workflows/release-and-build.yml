@@ -89,10 +89,16 @@ jobs:
           PROPS
       - name: Build release APK
         run: flutter build apk --release
+      - name: Rename APK
+        env:
+          NEW_VERSION: ${{ needs.bump-version.outputs.version }}
+        run: |
+          mv build/app/outputs/apk/release/app-release.apk \
+             "build/app/outputs/apk/release/imfxtech-chat-$NEW_VERSION.apk"
       - uses: actions/upload-artifact@v4
         with:
           name: imfxtech-chat-android
-          path: build/app/outputs/apk/release/app-release.apk
+          path: build/app/outputs/apk/release/imfxtech-chat-*.apk
 
   build-ios:
     needs: bump-version
@@ -110,15 +116,17 @@ jobs:
       - name: Build unsigned iOS app
         run: flutter build ios --release --no-codesign
       - name: Package unsigned IPA
+        env:
+          NEW_VERSION: ${{ needs.bump-version.outputs.version }}
         run: |
           mkdir -p build/ios/ipa/Payload
           cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
-          zip -r imfxtech-chat-unsigned.ipa Payload
+          zip -r "imfxtech-chat-$NEW_VERSION-unsigned.ipa" Payload
       - uses: actions/upload-artifact@v4
         with:
           name: imfxtech-chat-ios
-          path: build/ios/ipa/imfxtech-chat-unsigned.ipa
+          path: build/ios/ipa/imfxtech-chat-*-unsigned.ipa
 
   create-release:
     needs: [bump-version, build-android, build-ios]
@@ -140,8 +148,8 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           gh release create "$NEW_TAG" \
-            dist/app-release.apk \
-            dist/imfxtech-chat-unsigned.ipa \
+            dist/imfxtech-chat-"$NEW_VERSION".apk \
+            dist/imfxtech-chat-"$NEW_VERSION"-unsigned.ipa \
             --repo "$REPO" \
             --title "IMFxTech Chat $NEW_VERSION" \
             --generate-notes \
