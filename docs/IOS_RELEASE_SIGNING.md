@@ -4,19 +4,37 @@ Este documento registra o que falta para o workflow `release-and-build.yml`
 gerar um `.ipa` **assinado** (instalável em aparelho real / TestFlight), em vez
 do build sem assinatura (`--no-codesign`) que ele gera hoje.
 
-## Status atual
+## Status atual (atualizado 2026-09-30)
 
 - ✅ Bundle IDs do app já definidos: `com.imfxtech.chat` (app),
   `com.imfxtech.chat.Share` (extensão de compartilhamento),
   `com.imfxtech.chat.NotificationService` (extensão de notificação) — ver
   `docs/superpowers/specs/2026-09-09-imfxtech-chat-rebrand-design.md`.
-- ✅ `release-and-build.yml` já builda um `.ipa` sem assinatura em toda
-  execução (job `build-ios`, roda em `macos-latest`), só pra validar que
-  compila.
-- ⏳ Conta Apple Developer da IMFxTech: convite recebido, ainda não aceito /
-  papel no time ainda não confirmado.
-- ⏳ Certificado de distribuição, App IDs, Provisioning Profiles: nada disso
-  existe ainda.
+- ✅ Convite da conta Apple Developer da IMFxTech (time "Don Silva Martins",
+  Team ID `Q9FX293J5N`) aceito; papel de `marcelofmatos@gmail.com` no App
+  Store Connect é **Administrador**.
+- ✅ App já registrado no App Store Connect: nome "IMFxTech Chat", Bundle ID
+  `com.imfxtech.chat`, SKU `imfxtech-chat`, Apple ID `6810974674`. Metadados
+  (nome, subtítulo, categoria, descrição, palavras-chave, URL de suporte,
+  URL e etiqueta de política de privacidade) preenchidos e publicados.
+- ✅ `release-and-build.yml` (job `build-ios`) e `ios/fastlane/{Appfile,Fastfile}`
+  já implementam o caminho assinado completo (importar `.p12`, instalar os 3
+  `.mobileprovision`, gerar `ExportOptions.plist`, `flutter build ipa`, upload
+  automático pro TestFlight via fastlane). Ele cai automaticamente para o
+  build sem assinatura (`--no-codesign`) enquanto os secrets abaixo não
+  existirem — nada quebra.
+- ⏳ **Bloqueio atual**: `marcelofmatos@gmail.com` **não** tem acesso ao
+  Developer Portal (Certificates, Identifiers & Profiles) do time "Don Silva
+  Martins" — confirmado repetidamente entre 2026-09-26 e 2026-09-29, não é
+  atraso de propagação. Ser Admin no App Store Connect não dá esse acesso
+  automaticamente nesse time; é um sistema de papéis separado
+  (developer.apple.com/account → People), que só o Team Agent
+  (`dev@nhwgroup.com.br`) pode conceder. Sem isso não dá pra gerar o
+  certificado de distribuição nem os App IDs/Provisioning Profiles dos
+  próximos passos.
+- ⏳ Certificado de distribuição, App IDs (com capabilities), Provisioning
+  Profiles: nada disso existe ainda — depende do bloqueio acima.
+- ⏳ Secrets do GitHub (passo 5): nenhum criado ainda.
 
 ## Passo a passo completo
 
@@ -76,10 +94,22 @@ Em **Profiles** → "+", um profile **por App ID** (3 no total), tipo:
 Cada profile usa o certificado de distribuição gerado no passo 2. Baixa os 3
 arquivos `.mobileprovision`.
 
-### 5. Configuração no GitHub (eu faço)
+### 5. Configuração no GitHub (eu faço) — workflow já pronto, só faltam os secrets
 
-Novos *repository secrets* (mesmo padrão já usado pros do Android —
-`ANDROID_KEYSTORE_BASE64` etc., ver
+O job `build-ios` em `.github/workflows/release-and-build.yml` e
+`ios/fastlane/{Appfile,Fastfile}` **já foram implementados** (2026-09-30):
+importa o `.p12` numa keychain temporária do runner, instala os 3
+`.mobileprovision` em `~/Library/MobileDevice/Provisioning Profiles/`, gera
+um `ExportOptions.plist` com o Team ID, roda
+`flutter build ipa --export-options-plist=...` (archive + export assinado,
+em vez do hack de zipar `Payload/Runner.app` que só serve pra build sem
+assinatura) e sobe pro TestFlight via `fastlane upload_testflight` usando uma
+chave de API do App Store Connect. Tudo isso é condicional: se
+`IOS_CERTIFICATE_P12_BASE64` não existir, o job cai automaticamente no build
+sem assinatura de hoje — não quebra nada enquanto os secrets não existem.
+
+Faltam só criar os *repository secrets* (mesmo padrão já usado pros do
+Android — `ANDROID_KEYSTORE_BASE64` etc., ver
 [imfxtech-chat-secrets-backup/README.md](file:///home/marcelo/HD3/botDon/imfxtech-chat-secrets-backup/README.md)):
 
 - `IOS_CERTIFICATE_P12_BASE64` / `IOS_CERTIFICATE_PASSWORD`
@@ -87,25 +117,21 @@ Novos *repository secrets* (mesmo padrão já usado pros do Android —
 - `IOS_PROVISIONING_PROFILE_SHARE_BASE64`
 - `IOS_PROVISIONING_PROFILE_NOTIFICATION_BASE64`
 - `IOS_TEAM_ID`
-
-E troco o job `build-ios` em `.github/workflows/release-and-build.yml`: em vez
-de `flutter build ios --release --no-codesign` + zipar o `.app` manualmente,
-passa a:
-1. Importar o `.p12` numa keychain temporária do runner.
-2. Instalar os 3 `.mobileprovision` em
-   `~/Library/MobileDevice/Provisioning Profiles/`.
-3. Gerar um `ExportOptions.plist` com o Team ID e o método de export
-   (`app-store` ou `ad-hoc`).
-4. Rodar `flutter build ipa --export-options-plist=ExportOptions.plist`, que
-   já faz archive + export assinado corretamente (diferente do hack atual de
-   zipar `Payload/Runner.app`, que só serve pra build sem assinatura).
+- `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_CONTENT` — chave de API do App
+  Store Connect (não é a mesma coisa do certificado de distribuição; gerada
+  em App Store Connect → Usuários e acesso → Integrações → App Store
+  Connect API, papel **App Manager** ou superior — isso o Marcelo já tem
+  acesso pra fazer, não depende do Developer Portal). `ASC_KEY_CONTENT` é o
+  conteúdo do arquivo `.p8` baixado, codificado em base64
+  (`base64 -w0 AuthKey_XXXX.p8`).
 
 ### 6. Teste
 
-- Com profile **App Store**: sobe pro TestFlight (via `xcrun altool` ou
-  `fastlane pilot`) e instala por lá.
-- Com profile **Ad Hoc**: instala direto no aparelho cujo UDID está no
-  profile (ex.: via um link de instalação OTA, ou Diawi).
+- Build assinado com profile **App Store**: sobe pro TestFlight
+  automaticamente (lane `upload_testflight` do fastlane) e instala por lá.
+- Pra instalar direto num aparelho de teste sem passar pelo TestFlight, seria
+  preciso um profile **Ad Hoc** à parte (não implementado — não é o fluxo
+  que o Marcelo pediu, que é "publicado pelo git actions").
 
 ## Referências
 

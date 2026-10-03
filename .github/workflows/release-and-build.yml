@@ -1,11 +1,18 @@
 name: Release and Build
 
 # Manually triggered: bumps the app version, tags it, and builds an Android
-# release APK (signed with our own keystore) and an unsigned iOS build,
-# publishing both as a GitHub Release.
+# release APK (signed with our own keystore) and an iOS build, publishing
+# both as a GitHub Release.
 #
-# iOS is unsigned (--no-codesign) until we have an Apple Developer account and
-# a distribution certificate/provisioning profile — see TODO.md.
+# iOS is signed and uploaded to TestFlight automatically once the signing
+# secrets below exist in the repo; until then it falls back to an unsigned
+# (--no-codesign) build attached to the GitHub Release. See
+# docs/IOS_RELEASE_SIGNING.md for how to provision the secrets:
+#   IOS_CERTIFICATE_P12_BASE64, IOS_CERTIFICATE_PASSWORD,
+#   IOS_PROVISIONING_PROFILE_APP_BASE64,
+#   IOS_PROVISIONING_PROFILE_SHARE_BASE64,
+#   IOS_PROVISIONING_PROFILE_NOTIFICATION_BASE64, IOS_TEAM_ID,
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_CONTENT (base64 .p8)
 
 on:
   workflow_dispatch:
@@ -103,6 +110,8 @@ jobs:
   build-ios:
     needs: bump-version
     runs-on: macos-latest
+    outputs:
+      signed: ${{ steps.signing.outputs.enabled }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -113,9 +122,92 @@ jobs:
           cache: true
       - uses: dtolnay/rust-toolchain@stable
       - run: flutter pub get
+      - name: Check iOS signing secrets
+        id: signing
+        env:
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+        run: |
+          if [ -n "$IOS_CERTIFICATE_P12_BASE64" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --- Signed path (used once the secrets in docs/IOS_RELEASE_SIGNING.md exist) ---
+      - name: Import signing certificate
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          echo "$IOS_CERTIFICATE_P12_BASE64" | base64 -d > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          readarray -t EXISTING_KEYCHAINS < <(security list-keychains -d user | sed 's/"//g')
+          security list-keychains -d user -s build.keychain "${EXISTING_KEYCHAINS[@]}"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm certificate.p12
+      - name: Install provisioning profiles
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          IOS_PROVISIONING_PROFILE_APP_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_APP_BASE64 }}
+          IOS_PROVISIONING_PROFILE_SHARE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_SHARE_BASE64 }}
+          IOS_PROVISIONING_PROFILE_NOTIFICATION_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_NOTIFICATION_BASE64 }}
+        run: |
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFILES_DIR"
+          echo "$IOS_PROVISIONING_PROFILE_APP_BASE64" | base64 -d > "$PROFILES_DIR/app.mobileprovision"
+          echo "$IOS_PROVISIONING_PROFILE_SHARE_BASE64" | base64 -d > "$PROFILES_DIR/share.mobileprovision"
+          echo "$IOS_PROVISIONING_PROFILE_NOTIFICATION_BASE64" | base64 -d > "$PROFILES_DIR/notification.mobileprovision"
+      - name: Generate ExportOptions.plist
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          cat > ios/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>teamID</key>
+            <string>$IOS_TEAM_ID</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+          </dict>
+          </plist>
+          PLIST
+      - name: Build signed iOS app
+        if: steps.signing.outputs.enabled == 'true'
+        run: flutter build ipa --release --export-options-plist=ios/ExportOptions.plist
+      - name: Rename signed IPA
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          NEW_VERSION: ${{ needs.bump-version.outputs.version }}
+        run: mv build/ios/ipa/*.ipa "build/ios/ipa/imfxtech-chat-$NEW_VERSION.ipa"
+      - name: Upload to TestFlight
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+          NEW_VERSION: ${{ needs.bump-version.outputs.version }}
+        run: |
+          cd ios
+          bundle install
+          bundle exec fastlane upload_testflight ipa_path:"../build/ios/ipa/imfxtech-chat-$NEW_VERSION.ipa"
+
+      # --- Fallback: unsigned build, still attached to the GitHub Release ---
       - name: Build unsigned iOS app
+        if: steps.signing.outputs.enabled != 'true'
         run: flutter build ios --release --no-codesign
       - name: Package unsigned IPA
+        if: steps.signing.outputs.enabled != 'true'
         env:
           NEW_VERSION: ${{ needs.bump-version.outputs.version }}
         run: |
@@ -123,10 +215,11 @@ jobs:
           cp -r build/ios/iphoneos/Runner.app build/ios/ipa/Payload/
           cd build/ios/ipa
           zip -r "imfxtech-chat-$NEW_VERSION-unsigned.ipa" Payload
+
       - uses: actions/upload-artifact@v4
         with:
           name: imfxtech-chat-ios
-          path: build/ios/ipa/imfxtech-chat-*-unsigned.ipa
+          path: build/ios/ipa/imfxtech-chat-*.ipa
 
   create-release:
     needs: [bump-version, build-android, build-ios]
@@ -146,11 +239,17 @@ jobs:
           NEW_TAG: ${{ needs.bump-version.outputs.tag }}
           NEW_VERSION: ${{ needs.bump-version.outputs.version }}
           REPO: ${{ github.repository }}
+          IOS_SIGNED: ${{ needs.build-ios.outputs.signed }}
         run: |
+          if [ "$IOS_SIGNED" = "true" ]; then
+            IOS_NOTE="iOS build is signed and was uploaded to TestFlight automatically. The .ipa attached here is the same signed build."
+          else
+            IOS_NOTE="iOS build is unsigned (--no-codesign) — needs an Apple Developer certificate/provisioning profile to install on a real device. Android APK is signed with our release keystore and ready to install."
+          fi
           gh release create "$NEW_TAG" \
             dist/imfxtech-chat-"$NEW_VERSION".apk \
-            dist/imfxtech-chat-"$NEW_VERSION"-unsigned.ipa \
+            dist/imfxtech-chat-"$NEW_VERSION"*.ipa \
             --repo "$REPO" \
             --title "IMFxTech Chat $NEW_VERSION" \
             --generate-notes \
-            --notes "iOS build is unsigned (--no-codesign) — needs an Apple Developer certificate/provisioning profile to install on a real device. Android APK is signed with our release keystore and ready to install."
+            --notes "$IOS_NOTE"

@@ -1,0 +1,2 @@
+app_identifier("com.imfxtech.chat")
+team_id(ENV["IOS_TEAM_ID"])
