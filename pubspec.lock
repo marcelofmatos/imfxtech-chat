@@ -1288,9 +1288,9 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "1bb9a0e3d8902bba8bc26b3791f64c69e2c8f2b8"
+      ref: "pin/refactor-device-keys-list-storing"
       resolved-ref: "1bb9a0e3d8902bba8bc26b3791f64c69e2c8f2b8"
-      url: "https://github.com/famedly/matrix-dart-sdk.git"
+      url: "https://github.com/marcelofmatos/matrix-dart-sdk.git"
     source: git
     version: "12.0.1"
   media_kit:
