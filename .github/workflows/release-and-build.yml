@@ -146,8 +146,8 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
           echo "$IOS_CERTIFICATE_P12_BASE64" | base64 -d > certificate.p12
           security import certificate.p12 -k build.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          readarray -t EXISTING_KEYCHAINS < <(security list-keychains -d user | sed 's/"//g')
-          security list-keychains -d user -s build.keychain "${EXISTING_KEYCHAINS[@]}"
+          EXISTING_KEYCHAINS=$(security list-keychains -d user | sed 's/"//g')
+          security list-keychains -d user -s build.keychain $EXISTING_KEYCHAINS
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
           rm certificate.p12
       - name: Install provisioning profiles
