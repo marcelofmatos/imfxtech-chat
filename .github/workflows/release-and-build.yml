@@ -178,6 +178,17 @@ jobs:
             <string>$IOS_TEAM_ID</string>
             <key>signingStyle</key>
             <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.imfxtech.chat</key>
+              <string>IMFxTech Chat App Store</string>
+              <key>com.imfxtech.chat.Share</key>
+              <string>IMFxTech Chat Share App Store</string>
+              <key>com.imfxtech.chat.NotificationService</key>
+              <string>IMFxTech Chat Notification App Store</string>
+            </dict>
           </dict>
           </plist>
           PLIST
