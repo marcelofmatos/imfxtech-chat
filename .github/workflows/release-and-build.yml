@@ -209,9 +209,12 @@ jobs:
           IOS_TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
           NEW_VERSION: ${{ needs.bump-version.outputs.version }}
         run: |
-          cd ios
-          bundle install
-          bundle exec fastlane upload_testflight ipa_path:"../build/ios/ipa/imfxtech-chat-$NEW_VERSION.ipa"
+          mkdir -p ~/.private_keys
+          echo "$ASC_KEY_CONTENT" | base64 -d > ~/.private_keys/AuthKey_$ASC_KEY_ID.p8
+          xcrun altool --upload-app --type ios \
+            -f "build/ios/ipa/imfxtech-chat-$NEW_VERSION.ipa" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
 
       # --- Fallback: unsigned build, still attached to the GitHub Release ---
       - name: Build unsigned iOS app
