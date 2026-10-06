@@ -1,4 +1,4 @@
-/*package com.imfxtech.chat
+package com.imfxtech.chat
 
 import com.famedly.fcm_shared_isolate.FcmSharedIsolateService
 
@@ -25,4 +25,3 @@ class FcmPushService : FcmSharedIsolateService() {
         }
     }
 }
-*/
