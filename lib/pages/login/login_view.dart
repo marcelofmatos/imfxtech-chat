@@ -58,6 +58,7 @@ class LoginView extends StatelessWidget {
                   child: HomeserverTextField(
                     controller: controller.homeserverController,
                     readOnly: controller.loading,
+                    errorText: controller.homeserverError,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -78,7 +79,7 @@ class LoginView extends StatelessWidget {
                       prefixIcon: const Icon(Icons.account_box_outlined),
                       errorText: controller.usernameError,
                       errorStyle: const TextStyle(color: Colors.orange),
-                      hintText: '@username:domain',
+                      hintText: 'usuario ou @usuario:dominio',
                       labelText: L10n.of(context).matrixId,
                     ),
                   ),

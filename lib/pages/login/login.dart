@@ -18,6 +18,18 @@ import 'package:matrix/matrix.dart';
 import '../../utils/platform_infos.dart';
 import 'login_view.dart';
 
+/// ID completo (@user:dominio) é usado como está. "@user" sem domínio e
+/// "user" viram o nome de usuário local.
+String loginUserFor(String input) {
+  final text = input.trim();
+  if (text.startsWith('@') && text.contains(':')) return text;
+  return text.startsWith('@') ? text.substring(1) : text;
+}
+
+/// Sem domínio no nome, o login precisa do servidor digitado.
+bool requiresHomeserver(String input, String homeserver) =>
+    homeserver.trim().isEmpty && !loginUserFor(input).startsWith('@');
+
 class Login extends StatefulWidget {
   final Client client;
   const Login({required this.client, super.key});
@@ -31,6 +43,7 @@ class LoginController extends State<Login> {
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   String? usernameError;
+  String? homeserverError;
   String? passwordError;
   bool loading = false;
   bool showPassword = false;
@@ -55,28 +68,21 @@ class LoginController extends State<Login> {
       return;
     }
 
+    final homeserver = homeserverController.text.trim();
+    if (requiresHomeserver(usernameController.text, homeserver)) {
+      setState(() => homeserverError = L10n.of(context).pleaseEnterTheServer);
+      return;
+    }
+    setState(() => homeserverError = null);
+
     setState(() => loading = true);
 
     _coolDown?.cancel();
 
     try {
-      final username = usernameController.text;
-      AuthenticationIdentifier identifier;
-      if (username.isEmail) {
-        identifier = AuthenticationThirdPartyIdentifier(
-          medium: 'email',
-          address: username,
-        );
-      } else if (username.isPhoneNumber) {
-        identifier = AuthenticationThirdPartyIdentifier(
-          medium: 'msisdn',
-          address: username,
-        );
-      } else {
-        identifier = AuthenticationUserIdentifier(user: username);
-      }
+      final username = loginUserFor(usernameController.text);
+      final identifier = AuthenticationUserIdentifier(user: username);
       final client = await matrix.getLoginClient();
-      final homeserver = homeserverController.text.trim();
       if (homeserver.isNotEmpty) {
         final uri = Uri.parse(homeserver);
         await client.checkHomeserver(
@@ -276,12 +282,7 @@ class LoginController extends State<Login> {
 }
 
 extension on String {
-  static final RegExp _phoneRegex = RegExp(
-    r'^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$',
-  );
   static final RegExp _emailRegex = RegExp(r'(.+)@(.+)\.(.+)');
 
   bool get isEmail => _emailRegex.hasMatch(this);
-
-  bool get isPhoneNumber => _phoneRegex.hasMatch(this);
 }

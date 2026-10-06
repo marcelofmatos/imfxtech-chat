@@ -19,10 +19,12 @@ List<String> homeserverSuggestions(String typed) {
 class HomeserverTextField extends StatelessWidget {
   final TextEditingController controller;
   final bool readOnly;
+  final String? errorText;
 
   const HomeserverTextField({
     required this.controller,
     required this.readOnly,
+    this.errorText,
     super.key,
   });
 
@@ -40,6 +42,7 @@ class HomeserverTextField extends StatelessWidget {
             prefixIcon: const Icon(Icons.dns_outlined),
             labelText: L10n.of(context).homeserverLabel,
             hintText: 'chat.exemplo.vps.imfxtech.com',
+            errorText: errorText,
           ),
         ),
         ValueListenableBuilder(

@@ -2204,5 +2204,6 @@
     "appSubtitle": "Comunicação segura via Matrix",
     "appDescription": "Mensagens criptografadas, descentralizadas e fáceis de usar.",
     "signIn": "Conectar",
-    "homeserverLabel": "Servidor:"
+    "homeserverLabel": "Servidor:",
+    "pleaseEnterTheServer": "Informe o servidor"
 }

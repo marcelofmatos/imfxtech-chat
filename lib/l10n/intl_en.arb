@@ -2805,6 +2805,7 @@
         }
     },
     "homeserverLabel": "Server:",
+    "pleaseEnterTheServer": "Please enter the server",
     "incomingCallFrom": "Incoming call from {user}",
     "@incomingCallFrom": {
         "placeholders": {
