@@ -18,10 +18,9 @@ const _vpsDomain = 'vps.imfxtech.com';
 List<String> homeserverSuggestions(String typed) {
   final text = typed.trim().toLowerCase();
   if (text.isEmpty || text.endsWith(_vpsDomain)) return const [];
-  return [
-    if (_vpsDomain.startsWith(text)) _vpsDomain,
-    if (!text.contains('.')) '$text.$_vpsDomain',
-  ];
+  if (_vpsDomain.startsWith(text)) return const [_vpsDomain];
+  final prefix = text.endsWith('.') ? text : '$text.';
+  return ['$prefix$_vpsDomain'];
 }
 
 class IntroPage extends StatelessWidget {
@@ -196,6 +195,12 @@ class IntroPage extends StatelessWidget {
                                 const SizedBox(height: 16),
                                 FilledButton(
                                   onPressed: () async {
+                                    if (homeserverController.text
+                                        .trim()
+                                        .isNotEmpty) {
+                                      login();
+                                      return;
+                                    }
                                     final client = await Matrix.of(
                                       context,
                                     ).getLoginClient();

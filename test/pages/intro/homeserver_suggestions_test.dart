@@ -17,11 +17,19 @@ void main() {
       expect(homeserverSuggestions('chat'), ['chat.vps.imfxtech.com']);
     });
 
-    test('sugere o domínio do VPS quando o texto é prefixo dele', () {
-      expect(homeserverSuggestions('vps'), [
-        'vps.imfxtech.com',
-        'vps.vps.imfxtech.com',
+    test('completa um endereço com ponto com o domínio do VPS', () {
+      expect(homeserverSuggestions('chat.exemplo'), [
+        'chat.exemplo.vps.imfxtech.com',
       ]);
+      expect(homeserverSuggestions('chat.adm'), ['chat.adm.vps.imfxtech.com']);
+    });
+
+    test('completa quando o texto termina com ponto', () {
+      expect(homeserverSuggestions('chat.'), ['chat.vps.imfxtech.com']);
+    });
+
+    test('sugere o domínio do VPS quando o texto é prefixo dele', () {
+      expect(homeserverSuggestions('vps'), ['vps.imfxtech.com']);
       expect(homeserverSuggestions('vps.imf'), ['vps.imfxtech.com']);
     });
 
@@ -31,11 +39,6 @@ void main() {
 
     test('não sugere nada quando o endereço já está completo', () {
       expect(homeserverSuggestions('chat.vps.imfxtech.com'), isEmpty);
-    });
-
-    test('não completa quando já há ponto e o texto não é prefixo do VPS', () {
-      expect(homeserverSuggestions('chat.exemplo'), isEmpty);
-      expect(homeserverSuggestions('matrix.org'), isEmpty);
     });
   });
 }

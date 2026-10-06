@@ -18,7 +18,10 @@ void main() {
     await AppSettings.init(loadWebConfigFile: false);
   });
 
-  Future<TextEditingController> pumpIntroPage(WidgetTester tester) async {
+  Future<TextEditingController> pumpIntroPage(
+    WidgetTester tester, {
+    void Function()? login,
+  }) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -47,7 +50,7 @@ void main() {
             loggingInToHomeserver: null,
             hasPresetHomeserver: false,
             welcomeText: null,
-            login: () {},
+            login: login ?? () {},
             homeserverController: controller,
           ),
         ),
@@ -90,5 +93,24 @@ void main() {
 
     expect(controller.text, 'chat.vps.imfxtech.com');
     expect(find.byType(ListTile), findsNothing);
+  });
+
+  testWidgets('Conectar com servidor digitado segue pelo callback de login', (
+    tester,
+  ) async {
+    var loginCalls = 0;
+    final controller = await pumpIntroPage(
+      tester,
+      login: () {
+        loginCalls++;
+      },
+    );
+
+    controller.text = 'chat.adm.vps.imfxtech.com';
+    await tester.pump();
+    await tester.tap(find.text('Conectar'));
+    await tester.pump();
+
+    expect(loginCalls, 1);
   });
 }
