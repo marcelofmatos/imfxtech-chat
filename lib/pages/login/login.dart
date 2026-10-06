@@ -27,6 +27,7 @@ class Login extends StatefulWidget {
 }
 
 class LoginController extends State<Login> {
+  final TextEditingController homeserverController = TextEditingController();
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   String? usernameError;
@@ -75,6 +76,13 @@ class LoginController extends State<Login> {
         identifier = AuthenticationUserIdentifier(user: username);
       }
       final client = await matrix.getLoginClient();
+      final homeserver = homeserverController.text.trim();
+      if (homeserver.isNotEmpty) {
+        final uri = Uri.parse(homeserver);
+        await client.checkHomeserver(
+          uri.scheme.isEmpty ? Uri.https(homeserver, '') : uri,
+        );
+      }
       await client.login(
         LoginType.mLoginPassword,
         identifier: identifier,
@@ -257,6 +265,7 @@ class LoginController extends State<Login> {
 
   @override
   void dispose() {
+    homeserverController.dispose();
     usernameController.dispose();
     passwordController.dispose();
     super.dispose();

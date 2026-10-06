@@ -30,19 +30,12 @@ class IntroPagePresenter extends StatefulWidget {
 class _IntroPagePresenterState extends State<IntroPagePresenter> {
   bool isLoading = kIsWeb;
   String? loggingInToHomeserver;
-  final _homeserverController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
 
     if (kIsWeb) _finishOidcLogin();
-  }
-
-  @override
-  void dispose() {
-    _homeserverController.dispose();
-    super.dispose();
   }
 
   Future<void> _finishOidcLogin() async {
@@ -106,17 +99,14 @@ class _IntroPagePresenterState extends State<IntroPagePresenter> {
   }
 
   void _login() {
-    final typedHomeserver = _homeserverController.text.trim();
-    final homeserver = typedHomeserver.isEmpty
-        ? AppSettings.presetHomeserver.value
-        : typedHomeserver;
-    if (homeserver.isEmpty) {
+    final presetHomeserver = AppSettings.presetHomeserver.value;
+    if (presetHomeserver.isEmpty) {
       context.go('${GoRouterState.of(context).uri.path}/sign_in');
       return;
     }
 
     connectToHomeserverFlow(
-      PublicHomeserverData(name: homeserver),
+      PublicHomeserverData(name: presetHomeserver),
       context,
       (snapshot) {},
       false,
@@ -133,7 +123,6 @@ class _IntroPagePresenterState extends State<IntroPagePresenter> {
           ? null
           : AppSettings.welcomeText.value,
       login: _login,
-      homeserverController: _homeserverController,
     );
   }
 }

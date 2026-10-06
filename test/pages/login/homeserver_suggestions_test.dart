@@ -3,7 +3,7 @@
 //
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import 'package:fluffychat/pages/intro/intro_page.dart';
+import 'package:fluffychat/pages/login/homeserver_text_field.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

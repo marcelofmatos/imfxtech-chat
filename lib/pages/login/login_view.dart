@@ -7,6 +7,7 @@ import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/widgets/layouts/login_scaffold.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'homeserver_text_field.dart';
 import 'login.dart';
 
 class LoginView extends StatelessWidget {
@@ -49,6 +50,14 @@ class LoginView extends StatelessWidget {
                         height: 128,
                       ),
                     ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: HomeserverTextField(
+                    controller: controller.homeserverController,
+                    readOnly: controller.loading,
                   ),
                 ),
                 const SizedBox(height: 16),
