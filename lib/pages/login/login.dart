@@ -30,6 +30,17 @@ String loginUserFor(String input) {
 bool requiresHomeserver(String input, String homeserver) =>
     homeserver.trim().isEmpty && !loginUserFor(input).startsWith('@');
 
+AuthenticationIdentifier loginIdentifierFor(String input) {
+  final text = input.trim();
+  if (text.isEmail) {
+    return AuthenticationThirdPartyIdentifier(medium: 'email', address: text);
+  }
+  if (text.isPhoneNumber) {
+    return AuthenticationThirdPartyIdentifier(medium: 'msisdn', address: text);
+  }
+  return AuthenticationUserIdentifier(user: loginUserFor(text));
+}
+
 class Login extends StatefulWidget {
   final Client client;
   const Login({required this.client, super.key});
@@ -80,8 +91,7 @@ class LoginController extends State<Login> {
     _coolDown?.cancel();
 
     try {
-      final username = loginUserFor(usernameController.text);
-      final identifier = AuthenticationUserIdentifier(user: username);
+      final identifier = loginIdentifierFor(usernameController.text);
       final client = await matrix.getLoginClient();
       if (homeserver.isNotEmpty) {
         final uri = Uri.parse(homeserver);
@@ -94,8 +104,8 @@ class LoginController extends State<Login> {
         identifier: identifier,
         // To stay compatible with older server versions
         // ignore: deprecated_member_use
-        user: identifier.type == AuthenticationIdentifierTypes.userId
-            ? username
+        user: identifier is AuthenticationUserIdentifier
+            ? identifier.user
             : null,
         password: passwordController.text,
         initialDeviceDisplayName: PlatformInfos.appDisplayName,
@@ -282,7 +292,12 @@ class LoginController extends State<Login> {
 }
 
 extension on String {
+  static final RegExp _phoneRegex = RegExp(
+    r'^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$',
+  );
   static final RegExp _emailRegex = RegExp(r'(.+)@(.+)\.(.+)');
 
   bool get isEmail => _emailRegex.hasMatch(this);
+
+  bool get isPhoneNumber => _phoneRegex.hasMatch(this);
 }

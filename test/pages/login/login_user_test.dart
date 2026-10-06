@@ -5,8 +5,45 @@
 
 import 'package:fluffychat/pages/login/login.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:matrix/matrix.dart';
 
 void main() {
+  group('loginIdentifierFor', () {
+    test('ID completo e nome sem @ viram usuário', () {
+      final full = loginIdentifierFor('@marcelo:chat.adm.vps.imfxtech.com');
+      expect(full, isA<AuthenticationUserIdentifier>());
+      expect(
+        (full as AuthenticationUserIdentifier).user,
+        '@marcelo:chat.adm.vps.imfxtech.com',
+      );
+
+      final plain = loginIdentifierFor('marcelo');
+      expect(plain, isA<AuthenticationUserIdentifier>());
+      expect((plain as AuthenticationUserIdentifier).user, 'marcelo');
+    });
+
+    test('@ sem domínio vira o nome de usuário local', () {
+      final identifier = loginIdentifierFor('@marcelo');
+      expect((identifier as AuthenticationUserIdentifier).user, 'marcelo');
+    });
+
+    test('e-mail vira identificador de e-mail', () {
+      final identifier = loginIdentifierFor('marcelo@exemplo.com');
+      expect(identifier, isA<AuthenticationThirdPartyIdentifier>());
+      final third = identifier as AuthenticationThirdPartyIdentifier;
+      expect(third.medium, 'email');
+      expect(third.address, 'marcelo@exemplo.com');
+    });
+
+    test('telefone vira identificador de msisdn', () {
+      final identifier = loginIdentifierFor('+55 11 99999-8888');
+      expect(identifier, isA<AuthenticationThirdPartyIdentifier>());
+      final third = identifier as AuthenticationThirdPartyIdentifier;
+      expect(third.medium, 'msisdn');
+      expect(third.address, '+55 11 99999-8888');
+    });
+  });
+
   group('loginUserFor', () {
     test('ID Matrix completo é usado como está', () {
       expect(
