@@ -13,10 +13,22 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
+const _vpsDomain = 'vps.imfxtech.com';
+
+List<String> homeserverSuggestions(String typed) {
+  final text = typed.trim().toLowerCase();
+  if (text.isEmpty || text.endsWith(_vpsDomain)) return const [];
+  return [
+    if (_vpsDomain.startsWith(text)) _vpsDomain,
+    if (!text.contains('.')) '$text.$_vpsDomain',
+  ];
+}
+
 class IntroPage extends StatelessWidget {
   final bool isLoading, hasPresetHomeserver;
   final String? loggingInToHomeserver, welcomeText;
   final VoidCallback login;
+  final TextEditingController homeserverController;
 
   const IntroPage({
     required this.isLoading,
@@ -25,6 +37,7 @@ class IntroPage extends StatelessWidget {
     required this.hasPresetHomeserver,
     required this.welcomeText,
     required this.login,
+    required this.homeserverController,
   });
 
   @override
@@ -143,6 +156,44 @@ class IntroPage extends StatelessWidget {
                               mainAxisSize: .min,
                               crossAxisAlignment: .stretch,
                               children: [
+                                TextField(
+                                  controller: homeserverController,
+                                  autocorrect: false,
+                                  keyboardType: TextInputType.url,
+                                  decoration: InputDecoration(
+                                    labelText: L10n.of(context).homeserverLabel,
+                                    hintText: 'chat.exemplo.vps.imfxtech.com',
+                                    border: OutlineInputBorder(),
+                                  ),
+                                ),
+                                ValueListenableBuilder(
+                                  valueListenable: homeserverController,
+                                  builder: (context, value, _) => Column(
+                                    mainAxisSize: .min,
+                                    children: [
+                                      for (final suggestion
+                                          in homeserverSuggestions(value.text))
+                                        ListTile(
+                                          dense: true,
+                                          leading: const Icon(
+                                            Icons.dns_outlined,
+                                          ),
+                                          title: Text(suggestion),
+                                          onTap: () {
+                                            homeserverController
+                                                .value = TextEditingValue(
+                                              text: suggestion,
+                                              selection:
+                                                  TextSelection.collapsed(
+                                                    offset: suggestion.length,
+                                                  ),
+                                            );
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
                                 FilledButton(
                                   onPressed: () async {
                                     final client = await Matrix.of(

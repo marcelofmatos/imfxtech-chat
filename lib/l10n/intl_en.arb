@@ -2804,6 +2804,7 @@
             "msg": {"type": "String"}
         }
     },
+    "homeserverLabel": "Server:",
     "incomingCallFrom": "Incoming call from {user}",
     "@incomingCallFrom": {
         "placeholders": {
