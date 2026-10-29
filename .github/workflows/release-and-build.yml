@@ -109,7 +109,8 @@ jobs:
 
   build-ios:
     needs: bump-version
-    runs-on: macos-latest
+    # Intel: a fila de macOS arm64 cancelou o job 4x seguidas por falta de capacidade
+    runs-on: macos-15-intel
     outputs:
       signed: ${{ steps.signing.outputs.enabled }}
     steps:
