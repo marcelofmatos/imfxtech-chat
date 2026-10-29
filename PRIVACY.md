@@ -44,7 +44,7 @@ ou desinstalar o app.
 
 ## Exclusão de dados
 
-Você pode desativar sua conta pelo próprio app (Configurações → Conta →
+Você pode desativar sua conta pelo próprio app (Configurações → Segurança →
 Desativar conta). A exclusão dos dados no servidor segue a política do
 homeserver que você usa. Para contas no servidor da IMFxTech, peça a exclusão
 pelo e-mail abaixo.
