@@ -1,3 +1,4 @@
+// SPDX-FileCopyrightText: 2026 IMFX TECH LTDA
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // A Apple rejeitou o app por usar CallKit (vídeo obrigatório na revisão e

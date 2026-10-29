@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 IMFX TECH LTDA
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Excluir sua conta do IMFxTech Chat
 
 Desenvolvedor: IMFX TECH LTDA (IMFxTech Dev na Google Play)

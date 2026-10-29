@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 IMFX TECH LTDA
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Bump the app version for a release.
 
 Reads the current `version: X.Y.Z+B` line from pubspec.yaml, bumps X/Y/Z per

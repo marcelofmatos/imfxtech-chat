@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 IMFX TECH LTDA
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Arquitetura e fluxo — publicação do IMFxTech Chat no iOS (TestFlight)
 
 Descreve o pipeline real que está funcionando: workflow `Release and Build`

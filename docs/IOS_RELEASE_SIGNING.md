@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 IMFX TECH LTDA
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Assinatura de release do iOS — processo e status
 
 Este documento registra o que falta para o workflow `release-and-build.yml`

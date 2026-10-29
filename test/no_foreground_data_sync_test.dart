@@ -1,9 +1,10 @@
+// SPDX-FileCopyrightText: 2026 IMFX TECH LTDA
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // O light_compressor_v2 declara FOREGROUND_SERVICE_DATA_SYNC e um serviço
 // dataSync que o app nunca inicia (não passamos `background:` ao comprimir
 // vídeo). A Google Play exige um vídeo de demonstração para essa permissão,
-// então ela é removida no manifest do app. Ver PUBLISHING_GOOGLEPLAY.md.
+// então ela é removida no manifest do app. Ver docs/GOOGLE_PLAY_PUBLISHING.md.
 
 import 'dart:io';
 
