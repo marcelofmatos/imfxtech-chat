@@ -20,6 +20,9 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SHORT_SERVICE" />
+    <!-- light_compressor_v2 declares a dataSync foreground service we never start
+         (no `background:` config); Google Play requires a demo video for it. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" tools:node="remove" />
 
     <!-- To make app compatible with tablets -->
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
@@ -124,6 +127,8 @@
              android:foregroundServiceType="camera|microphone|mediaProjection|shortService"
              android:exported="false">
         </service>
+
+        <service android:name="com.gurfdev.light_compressor_v2.CompressionForegroundService" tools:node="remove" />
 
         <!-- From flutter_local_notifications package for notification actions -->
         <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
