@@ -24,8 +24,6 @@ import 'package:fluffychat/widgets/avatar.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:fluffychat/widgets/share_scaffold_dialog.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_callkit_incoming/entities/entities.dart';
-import 'package:flutter_callkit_incoming/flutter_callkit_incoming.dart';
 import 'package:flutter_shortcuts_new/flutter_shortcuts_new.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -79,8 +77,6 @@ class ChatListController extends State<ChatList>
 
   StreamSubscription? _intentFileStreamSubscription;
 
-  StreamSubscription? _callEventSubscription;
-
   late ActiveFilter activeFilter;
   String? activeTag;
 
@@ -104,23 +100,6 @@ class ChatListController extends State<ChatList>
   void clearActiveSpace() => setState(() {
     _activeSpaceId = null;
   });
-
-  void _onCallEvent(CallEvent? event) {
-    switch (event) {
-      case CallEventActionCallAccept():
-        _joinCallWith(event.callKitParams);
-        break;
-      case CallEventActionCallEnded():
-        final roomId = event.callKitParams.extra?.tryGet<String>('roomId');
-        if (roomId != null &&
-            Matrix.of(context).activeCallRoomId.value == roomId) {
-          Matrix.of(context).activeCallRoomId.value = null;
-        }
-        break;
-      default:
-        break;
-    }
-  }
 
   Future<void> onChatTap(Room room) async {
     final l10n = L10n.of(context);
@@ -399,14 +378,6 @@ class ChatListController extends State<ChatList>
     }
   }
 
-  void _joinCallWith(CallKitParams params) {
-    final roomId = params.extra?.tryGet<String>('roomId');
-    final clientName = params.extra?.tryGet<String>('clientName');
-    if (roomId != null) {
-      context.go('/rooms/$roomId?client=$clientName&action=call');
-    }
-  }
-
   StreamSubscription? _onRoomTagUpdate;
 
   @override
@@ -416,16 +387,6 @@ class ChatListController extends State<ChatList>
 
     scrollController.addListener(_onScroll);
     _waitForFirstSync();
-    if (PlatformInfos.isMobile) {
-      _callEventSubscription = FlutterCallkitIncoming.onEvent.listen(
-        _onCallEvent,
-      );
-      FlutterCallkitIncoming.activeCalls().then((calls) {
-        final params = calls.firstOrNull;
-        if (params == null) return;
-        _joinCallWith(params);
-      });
-    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -477,7 +438,6 @@ class ChatListController extends State<ChatList>
   void dispose() {
     _intentDataStreamSubscription?.cancel();
     _intentFileStreamSubscription?.cancel();
-    _callEventSubscription?.cancel();
     _onRoomTagUpdate?.cancel();
     scrollController.removeListener(_onScroll);
     searchController.dispose();

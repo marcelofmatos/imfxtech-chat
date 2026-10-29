@@ -75,7 +75,6 @@
 	<string>Share data with your contacts in IMFxTech Chat.</string>
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>voip</string>
 		<string>audio</string>
 		<string>fetch</string>
 		<string>processing</string>

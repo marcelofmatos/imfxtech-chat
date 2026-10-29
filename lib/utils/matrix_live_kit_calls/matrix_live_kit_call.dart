@@ -343,10 +343,4 @@ class MatrixRtcCredentials {
       );
 }
 
-enum MatrixRtcCallIntent {
-  voice(callKitType: 0),
-  video(callKitType: 1);
-
-  final int callKitType;
-  const MatrixRtcCallIntent({required this.callKitType});
-}
+enum MatrixRtcCallIntent { voice, video }
