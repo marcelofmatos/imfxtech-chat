@@ -1,0 +1,1 @@
+Primeira versão do IMFxTech Chat: mensagens seguras, com criptografia de ponta a ponta, no protocolo aberto Matrix.

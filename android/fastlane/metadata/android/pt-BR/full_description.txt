@@ -1,0 +1,23 @@
+### Mensagens do jeito que deveriam ser
+
+Para os amigos, a empresa ou a comunidade, o IMFxTech Chat traz os recursos que você precisa no dia a dia.
+
+#### Fácil de usar
+
+É só instalar, entrar e começar a conversar. A interface intuitiva deixa a comunicação segura o mais simples possível.
+
+#### Seguro
+
+Com criptografia de ponta a ponta (olm/megolm), backup criptografado das mensagens e verificação automática de chaves, o IMFxTech Chat está entre os mensageiros mais seguros disponíveis.
+
+#### Descentralizado
+
+Baseado no protocolo aberto Matrix, o IMFxTech Chat faz parte de uma rede de mensagens descentralizada que nenhuma empresa controla sozinha. Use seu próprio servidor e continue falando com todo mundo.
+
+### Completo e confiável
+
+De salas públicas com milhares de participantes e enquetes a figurinhas personalizadas, espaços, ferramentas de moderação e uso em vários dispositivos, o IMFxTech Chat entrega uma suíte de comunicação completa.
+
+#### Sem jardim murado
+
+O IMFxTech Chat não prende você a uma plataforma fechada: ele é compatível com qualquer outro cliente Matrix, como Element, Nheko, Cinny ou NeoChat. Saiba mais em matrix.org.
