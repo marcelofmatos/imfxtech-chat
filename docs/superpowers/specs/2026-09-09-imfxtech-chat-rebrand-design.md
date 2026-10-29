@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2026 IMFX TECH LTDA
+
+SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+
 # Rebranding para IMFxTech Chat — Spec
 
 Data: 2026-09-09

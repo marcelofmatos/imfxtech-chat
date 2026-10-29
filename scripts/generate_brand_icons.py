@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 IMFX TECH LTDA
+# SPDX-License-Identifier: AGPL-3.0-or-later
 """Generate IMFxTech Chat launcher icons from the branding source PNGs.
 
 Source assets live outside this repo, in ~/HD3/botDon/branding/ (prepared by
