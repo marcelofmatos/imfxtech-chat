@@ -109,8 +109,10 @@ jobs:
 
   build-ios:
     needs: bump-version
-    # Intel: a fila de macOS arm64 cancelou o job 4x seguidas por falta de capacidade
-    runs-on: macos-15-intel
+    # Intel: a fila de macOS arm64 cancelou o job 4x seguidas por falta de capacidade.
+    # macOS 26 (Xcode 26 padrão): a App Store exige o SDK do iOS 26 e o Xcode 16 do
+    # macos-15-intel quebrou ao resolver os pacotes Swift.
+    runs-on: macos-26-intel
     outputs:
       signed: ${{ steps.signing.outputs.enabled }}
     steps:
