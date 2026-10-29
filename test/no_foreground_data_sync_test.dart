@@ -11,8 +11,9 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final manifest =
-      File('android/app/src/main/AndroidManifest.xml').readAsStringSync();
+  final manifest = File(
+    'android/app/src/main/AndroidManifest.xml',
+  ).readAsStringSync();
 
   test('manifest remove a permissão FOREGROUND_SERVICE_DATA_SYNC', () {
     expect(
@@ -28,11 +29,7 @@ void main() {
   test('manifest remove o serviço de compressão em primeiro plano', () {
     expect(
       manifest,
-      matches(
-        RegExp(
-          r'CompressionForegroundService"\s+tools:node="remove"',
-        ),
-      ),
+      matches(RegExp(r'CompressionForegroundService"\s+tools:node="remove"')),
     );
   });
 
