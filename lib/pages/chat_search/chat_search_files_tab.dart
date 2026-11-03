@@ -99,7 +99,7 @@ class ChatSearchFilesTab extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     subtitle: Text('$sizeString | $filetype'),
-                    onTap: () => event.saveFile(context),
+                    onTap: () => event.openFile(context),
                   ),
                 ),
               ],

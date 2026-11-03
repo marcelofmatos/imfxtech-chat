@@ -46,7 +46,7 @@ class MessageDownloadContent extends StatelessWidget {
           color: Colors.transparent,
           child: InkWell(
             borderRadius: BorderRadius.circular(AppConfig.borderRadius / 2),
-            onTap: () => event.saveFile(context),
+            onTap: () => event.openFile(context),
             child: Container(
               width: 400,
               padding: const EdgeInsets.all(16.0),
