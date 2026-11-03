@@ -1,8 +1,8 @@
 name: Release and Build
 
 # Manually triggered: bumps the app version, tags it, and builds an Android
-# release APK (signed with our own keystore) and an iOS build, publishing
-# both as a GitHub Release.
+# release APK (signed with our own keystore), an iOS build and a macOS .dmg,
+# publishing them as a GitHub Release.
 #
 # Android is additionally uploaded to the Google Play "internal" track
 # automatically once PLAY_STORE_JSON_KEY exists in the repo; until then it
@@ -18,6 +18,11 @@ name: Release and Build
 #   IOS_PROVISIONING_PROFILE_SHARE_BASE64,
 #   IOS_PROVISIONING_PROFILE_NOTIFICATION_BASE64, IOS_TEAM_ID,
 #   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_CONTENT (base64 .p8)
+#
+# macOS is packaged as a .dmg attached to the GitHub Release. Once the
+# Developer ID secrets exist it is signed and notarized (reusing the ASC_*
+# API key); until then the .dmg is unsigned. See docs/MACOS_RELEASE.md:
+#   MACOS_CERTIFICATE_P12_BASE64, MACOS_CERTIFICATE_PASSWORD
 
 on:
   workflow_dispatch:
@@ -280,8 +285,130 @@ jobs:
           name: imfxtech-chat-ios
           path: build/ios/ipa/imfxtech-chat-*.ipa
 
+  build-macos:
+    needs: bump-version
+    # Mesmo runner do build-ios (ver comentário lá). O build release do macOS
+    # é universal (arm64 + x86_64), então o runner Intel não limita o binário.
+    runs-on: macos-26-intel
+    outputs:
+      signed: ${{ steps.signing.outputs.enabled }}
+    env:
+      # Build sempre com assinatura ad-hoc: o projeto usa assinatura automática
+      # do team, que exige uma conta Apple logada no Xcode. O caminho assinado
+      # reassina o .app com o certificado Developer ID depois do build.
+      FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
+      FLUTTER_XCODE_CODE_SIGN_IDENTITY: "-"
+      FLUTTER_XCODE_DEVELOPMENT_TEAM: ""
+      FLUTTER_XCODE_PROVISIONING_PROFILE_SPECIFIER: ""
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.bump-version.outputs.tag }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .tool_versions.yaml
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - run: flutter pub get
+      - name: Check macOS signing secrets
+        id: signing
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+        run: |
+          if [ -n "$MACOS_CERTIFICATE_P12_BASE64" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::MACOS_CERTIFICATE_P12_BASE64 ausente: o .dmg do macOS sai sem assinatura Developer ID e sem notarização (ver docs/MACOS_RELEASE.md)."
+          fi
+      - name: Build macOS app
+        run: flutter build macos --release
+      - name: Locate app bundle
+        run: |
+          APP_PATH=$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -n 1)
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+
+      # --- Signed path (used once the secrets in docs/MACOS_RELEASE.md exist) ---
+      - name: Import Developer ID certificate
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          echo "$MACOS_CERTIFICATE_P12_BASE64" | base64 -d > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$MACOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          EXISTING_KEYCHAINS=$(security list-keychains -d user | sed 's/"//g')
+          security list-keychains -d user -s build.keychain $EXISTING_KEYCHAINS
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm certificate.p12
+          IDENTITY=$(security find-identity -v -p codesigning build.keychain | grep "Developer ID Application" | head -n 1 | awk '{print $2}')
+          [ -n "$IDENTITY" ] || { echo "::error::Developer ID Application não encontrado no .p12"; exit 1; }
+          echo "SIGNING_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+      - name: Sign app with Developer ID
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          find "$APP_PATH/Contents/Frameworks" -depth \( -name '*.framework' -o -name '*.dylib' \) \
+            -exec codesign --force --timestamp --options runtime --sign "$SIGNING_IDENTITY" {} \;
+          codesign --force --timestamp --options runtime \
+            --entitlements macos/Runner/Release.entitlements \
+            --sign "$SIGNING_IDENTITY" "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+
+      - name: Package DMG
+        env:
+          NEW_VERSION: ${{ needs.bump-version.outputs.version }}
+        run: |
+          mkdir -p build/macos/dmg/staging
+          cp -R "$APP_PATH" build/macos/dmg/staging/
+          ln -s /Applications build/macos/dmg/staging/Applications
+          hdiutil create -volname "IMFxTech Chat" -srcfolder build/macos/dmg/staging \
+            -ov -format UDZO "build/macos/dmg/imfxtech-chat-$NEW_VERSION-macos.dmg"
+
+      - name: Sign and notarize DMG
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          NEW_VERSION: ${{ needs.bump-version.outputs.version }}
+        run: |
+          DMG="build/macos/dmg/imfxtech-chat-$NEW_VERSION-macos.dmg"
+          codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$DMG"
+          mkdir -p ~/.private_keys
+          echo "$ASC_KEY_CONTENT" | base64 -d > ~/.private_keys/AuthKey_$ASC_KEY_ID.p8
+          xcrun notarytool submit "$DMG" \
+            --key ~/.private_keys/AuthKey_$ASC_KEY_ID.p8 \
+            --key-id "$ASC_KEY_ID" \
+            --issuer "$ASC_ISSUER_ID" \
+            --wait
+          xcrun stapler staple "$DMG"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: imfxtech-chat-macos
+          path: build/macos/dmg/imfxtech-chat-*-macos.dmg
+      - name: Clean up signing material
+        if: always() && steps.signing.outputs.enabled == 'true'
+        run: |
+          security delete-keychain build.keychain || true
+          rm -f certificate.p12 ~/.private_keys/AuthKey_*.p8
+
   create-release:
-    needs: [bump-version, build-android, build-ios]
+    needs: [bump-version, build-android, build-ios, build-macos]
+    # O macOS não bloqueia a release: as lojas já receberam o Android e o iOS,
+    # então a GitHub Release sai mesmo se o build ou a notarização do macOS
+    # falhar. Nesse caso ela só não leva o .dmg.
+    if: >-
+      always() &&
+      needs.bump-version.result == 'success' &&
+      needs.build-android.result == 'success' &&
+      needs.build-ios.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -292,6 +419,11 @@ jobs:
         with:
           name: imfxtech-chat-ios
           path: dist
+      - uses: actions/download-artifact@v4
+        if: needs.build-macos.result == 'success'
+        with:
+          name: imfxtech-chat-macos
+          path: dist
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -299,16 +431,28 @@ jobs:
           NEW_VERSION: ${{ needs.bump-version.outputs.version }}
           REPO: ${{ github.repository }}
           IOS_SIGNED: ${{ needs.build-ios.outputs.signed }}
+          MACOS_RESULT: ${{ needs.build-macos.result }}
+          MACOS_SIGNED: ${{ needs.build-macos.outputs.signed }}
         run: |
           if [ "$IOS_SIGNED" = "true" ]; then
             IOS_NOTE="iOS build is signed and was uploaded to TestFlight automatically. The .ipa attached here is the same signed build."
           else
             IOS_NOTE="iOS build is unsigned (--no-codesign) — needs an Apple Developer certificate/provisioning profile to install on a real device. Android APK is signed with our release keystore and ready to install."
           fi
+          NOTES="$IOS_NOTE"
+          ASSETS=(dist/imfxtech-chat-"$NEW_VERSION".apk dist/imfxtech-chat-"$NEW_VERSION"*.ipa)
+          if [ "$MACOS_RESULT" = "success" ]; then
+            if [ "$MACOS_SIGNED" = "true" ]; then
+              MACOS_NOTE="macOS .dmg is signed with Developer ID and notarized by Apple."
+            else
+              MACOS_NOTE="macOS .dmg is not signed with Developer ID nor notarized — Gatekeeper blocks the first launch (right-click > Open to bypass)."
+            fi
+            NOTES="$NOTES"$'\n\n'"$MACOS_NOTE"
+            ASSETS+=(dist/imfxtech-chat-"$NEW_VERSION"-macos.dmg)
+          fi
           gh release create "$NEW_TAG" \
-            dist/imfxtech-chat-"$NEW_VERSION".apk \
-            dist/imfxtech-chat-"$NEW_VERSION"*.ipa \
+            "${ASSETS[@]}" \
             --repo "$REPO" \
             --title "IMFxTech Chat $NEW_VERSION" \
             --generate-notes \
-            --notes "$IOS_NOTE"
+            --notes "$NOTES"
