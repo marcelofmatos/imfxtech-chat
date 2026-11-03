@@ -11,7 +11,19 @@ import 'package:material_ui/material_ui.dart';
 abstract class FluffyThemes {
   static const double columnWidth = 380.0;
 
-  static const double maxTimelineWidth = columnWidth * 2;
+  static const double maxTimelineWidth = 1400.0;
+
+  static const double _maxBubbleWidth = 1000.0;
+
+  static const double _bubbleWidthFraction = 0.75;
+
+  /// Largura máxima do balão de mensagem: 75% da área disponível, nunca menos
+  /// que o limite histórico (columnWidth * 1.5) e nunca mais que 1000 px.
+  static double bubbleMaxWidth(double availableWidth) =>
+      (availableWidth * _bubbleWidthFraction).clamp(
+        columnWidth * 1.5,
+        _maxBubbleWidth,
+      );
 
   static const double navRailWidth = 80.0;
 
