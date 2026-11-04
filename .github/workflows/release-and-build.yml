@@ -6,7 +6,8 @@ name: Release and Build
 #
 # Android is additionally uploaded to the Google Play "internal" track
 # automatically once PLAY_STORE_JSON_KEY exists in the repo; until then it
-# only builds the signed APK attached to the GitHub Release. See
+# only builds the signed APK attached to the GitHub Release. A failed Play
+# upload only warns: it never blocks the GitHub Release. See
 # docs/GOOGLE_PLAY_PUBLISHING.md for how to provision that secret.
 #
 # iOS is signed and uploaded to TestFlight automatically once the signing
@@ -142,8 +143,13 @@ jobs:
           else
             echo "enabled=false" >> "$GITHUB_OUTPUT"
           fi
+      # A Play não bloqueia a GitHub Release: se a conta ou o app estiverem
+      # suspensos (ou a Play recusar o upload), o APK assinado já foi gerado e
+      # a release sai assim mesmo. A falha vira um aviso no resumo do run.
       - name: Upload to Google Play (internal track)
+        id: play_upload
         if: steps.play_signing.outputs.enabled == 'true'
+        continue-on-error: true
         uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_STORE_JSON_KEY }}
@@ -153,6 +159,9 @@ jobs:
           # "draft" while the app was never published (Play rejects anything
           # else on a draft app); set the repo variable to "completed" after.
           status: ${{ vars.PLAY_RELEASE_STATUS || 'draft' }}
+      - name: Warn about failed Google Play upload
+        if: steps.play_upload.outcome == 'failure'
+        run: echo "::warning title=Google Play::Upload to Google Play failed; the GitHub Release is still created with the APK. Check the Play Console."
 
   build-ios:
     needs: bump-version
