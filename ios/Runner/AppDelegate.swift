@@ -18,6 +18,24 @@ import UniformTypeIdentifiers
     if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "FileDropPlugin") {
       FileDropPlugin.register(with: registrar)
     }
+    // Platform.isIOS continues to be true when this binary runs on an Apple
+    // Silicon Mac via "Designed for iPad" (not Mac Catalyst), so Dart needs
+    // ProcessInfo.isiOSAppOnMac from this channel to tell the two apart.
+    // See lib/utils/platform_infos.dart (isIOSAppOnMac).
+    if let registrar = engineBridge.pluginRegistry.registrar(forPlugin: "IOSAppOnMacPlugin") {
+      let channel = FlutterMethodChannel(
+        name: "com.imfxtech.chat/ios_app_on_mac",
+        binaryMessenger: registrar.messenger()
+      )
+      channel.setMethodCallHandler { call, result in
+        switch call.method {
+        case "isIOSAppOnMac":
+          result(ProcessInfo.processInfo.isiOSAppOnMac)
+        default:
+          result(FlutterMethodNotImplemented)
+        }
+      }
+    }
 
     // From https://pub.dev/packages/flutter_local_notifications#-ios-setup
     UNUserNotificationCenter.current().delegate = self as? UNUserNotificationCenterDelegate  }
