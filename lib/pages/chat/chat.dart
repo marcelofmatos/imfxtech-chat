@@ -22,6 +22,7 @@ import 'package:fluffychat/pages/chat_details/chat_details.dart';
 import 'package:fluffychat/utils/adaptive_bottom_sheet.dart';
 import 'package:fluffychat/utils/error_reporter.dart';
 import 'package:fluffychat/utils/file_selector.dart';
+import 'package:fluffychat/utils/ios_file_drop.dart';
 import 'package:fluffychat/utils/matrix_live_kit_calls/matrix_live_kit_call.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/event_extension.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/filtered_timeline_extension.dart';
@@ -145,14 +146,17 @@ class ChatController extends State<ChatPageWithRoom>
 
   void onDragExited(_) => setState(() => dragging = false);
 
-  Future<void> onDragDone(DropDoneDetails details) async {
+  Future<void> onDragDone(DropDoneDetails details) =>
+      onFilesDropped(details.files);
+
+  Future<void> onFilesDropped(List<XFile> files) async {
     setState(() => dragging = false);
-    if (details.files.isEmpty) return;
+    if (files.isEmpty) return;
 
     await showAdaptiveDialog(
       context: context,
       builder: (c) => SendFileDialog(
-        files: details.files,
+        files: files,
         room: room,
         outerContext: context,
         threadRootEventId: activeThreadId,
@@ -406,6 +410,13 @@ class ChatController extends State<ChatPageWithRoom>
       }
     });
     web.window.addEventListener('paste', _handleClipboardFilePasteWeb);
+    if (PlatformInfos.isIOS) {
+      IosFileDrop.listen(
+        onEnter: () => onDragEntered(null),
+        onExit: () => onDragExited(null),
+        onDrop: onFilesDropped,
+      );
+    }
 
     super.initState();
     _displayChatDetailsColumn = ValueNotifier(
@@ -669,6 +680,7 @@ class ChatController extends State<ChatPageWithRoom>
     inputFocus.dispose();
     _displayChatDetailsColumn.dispose();
     web.window.removeEventListener('paste', _handleClipboardFilePasteWeb);
+    if (PlatformInfos.isIOS) IosFileDrop.stop(onFilesDropped);
     if (currentlyTyping) room.setTyping(false);
     MxcImage.clearCache(widget.room.id);
     super.dispose();
@@ -846,13 +858,15 @@ class ChatController extends State<ChatPageWithRoom>
   }
 
   Future<void> _handleClipboardImagePaste() async {
-    final files = await Pasteboard.files();
+    final files = PlatformInfos.isIOS
+        ? await IosFileDrop.pasteboardFiles()
+        : (await Pasteboard.files()).map(XFile.new).toList();
     if (files.isNotEmpty) {
       if (!mounted) return;
       await showAdaptiveDialog(
         context: context,
         builder: (c) => SendFileDialog(
-          files: files.map(XFile.new).toList(),
+          files: files,
           room: room,
           outerContext: context,
           threadRootEventId: activeThreadId,
