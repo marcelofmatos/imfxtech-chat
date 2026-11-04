@@ -14,6 +14,7 @@ import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/config/themes.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat/chat_view.dart';
+import 'package:fluffychat/pages/chat/enter_key_newline.dart';
 import 'package:fluffychat/pages/chat/event_info_dialog.dart';
 import 'package:fluffychat/pages/chat/start_poll_bottom_sheet.dart';
 import 'package:fluffychat/pages/chat/trust_user_key_dialog.dart';
@@ -354,44 +355,57 @@ class ChatController extends State<ChatPageWithRoom>
       return KeyEventResult.handled;
     }
 
-    if (!HardwareKeyboard.instance.isShiftPressed &&
-        evt.logicalKey.keyLabel == 'Enter' &&
-        AppSettings.sendOnEnter.value) {
-      if (evt is KeyDownEvent) {
-        send();
-      }
+    if (evt.logicalKey.keyLabel != 'Enter') return KeyEventResult.ignored;
+
+    final action = enterKeyAction(
+      evt,
+      shift: HardwareKeyboard.instance.isShiftPressed,
+      isMobile: PlatformInfos.isMobile,
+      sendOnEnter: AppSettings.sendOnEnter.value,
+    );
+    if (action == EnterKeyAction.send) {
+      send();
       return KeyEventResult.handled;
-    } else if (evt.logicalKey.keyLabel == 'Enter' && evt is KeyDownEvent) {
-      final currentLineNum =
-          sendController.text
-              .substring(0, sendController.selection.baseOffset)
-              .split('\n')
-              .length -
-          1;
-      final currentLine = sendController.text.split('\n')[currentLineNum];
-
-      for (final pattern in [
-        '- [ ] ',
-        '- [x] ',
-        '* [ ] ',
-        '* [x] ',
-        '- ',
-        '* ',
-        '+ ',
-      ]) {
-        if (currentLine.startsWith(pattern)) {
-          if (currentLine == pattern) {
-            return KeyEventResult.ignored;
-          }
-          sendController.text += '\n$pattern';
-          return KeyEventResult.handled;
-        }
-      }
-
-      return KeyEventResult.ignored;
-    } else {
-      return KeyEventResult.ignored;
     }
+    if (action == EnterKeyAction.swallow) return KeyEventResult.handled;
+
+    if (evt is KeyDownEvent && _continueMarkdownList()) {
+      return KeyEventResult.handled;
+    }
+    if (action == EnterKeyAction.newline) {
+      insertNewlineAtSelection(sendController);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
+  /// Continua a lista markdown da linha atual. Retorna false se a linha não é
+  /// um item de lista ou se o item está vazio.
+  bool _continueMarkdownList() {
+    final currentLineNum =
+        sendController.text
+            .substring(0, sendController.selection.baseOffset)
+            .split('\n')
+            .length -
+        1;
+    final currentLine = sendController.text.split('\n')[currentLineNum];
+
+    for (final pattern in [
+      '- [ ] ',
+      '- [x] ',
+      '* [ ] ',
+      '* [x] ',
+      '- ',
+      '* ',
+      '+ ',
+    ]) {
+      if (currentLine.startsWith(pattern)) {
+        if (currentLine == pattern) return false;
+        sendController.text += '\n$pattern';
+        return true;
+      }
+    }
+    return false;
   }
 
   @override
