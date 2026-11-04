@@ -4,6 +4,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import 'package:async/async.dart' as async;
+import 'package:fluffychat/pages/pdf_viewer/pdf_viewer.dart';
 import 'package:fluffychat/utils/size_string.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
 import 'package:flutter/foundation.dart';
@@ -11,6 +12,14 @@ import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix.dart';
 
 import 'matrix_file_extension.dart';
+
+/// Sem mimetype (ou com o genérico octet-stream), decide pela extensão.
+bool isPdfFile({required String mimetype, required String filename}) {
+  final type = mimetype.toLowerCase();
+  return type.isEmpty || type == 'application/octet-stream'
+      ? filename.toLowerCase().endsWith('.pdf')
+      : type == 'application/pdf';
+}
 
 extension LocalizedBody on Event {
   Future<async.Result<MatrixFile?>> _getFile(BuildContext context) =>
@@ -40,6 +49,25 @@ extension LocalizedBody on Event {
     if (!context.mounted) return;
 
     matrixFile.result?.share(context);
+  }
+
+  bool get isPdf => isPdfFile(
+    mimetype: attachmentMimetype,
+    filename: content.tryGet<String>('filename') ?? body,
+  );
+
+  /// Abre PDFs no visualizador do app; os demais arquivos são salvos.
+  Future<void> openFile(BuildContext context) async {
+    if (!isPdf) return saveFile(context);
+
+    final file = (await _getFile(context)).result;
+    if (file == null || !context.mounted) return;
+
+    await showDialog(
+      context: context,
+      useSafeArea: false,
+      builder: (_) => PdfViewerPage(file: file),
+    );
   }
 
   bool get isAttachmentSmallEnough =>
