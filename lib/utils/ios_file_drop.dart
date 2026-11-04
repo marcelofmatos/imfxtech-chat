@@ -32,6 +32,10 @@ abstract class IosFileDrop {
     required void Function(List<XFile> files) onDrop,
   }) {
     _onDrop = onDrop;
+    // setMethodCallHandler exige um handler que retorne Future<dynamic>; sem
+    // o async o literal viraria void e não compilaria, mesmo sem nenhum
+    // await no corpo.
+    // ignore: avoid-redundant-async
     channel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'enter':
