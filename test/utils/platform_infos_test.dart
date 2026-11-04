@@ -48,14 +48,17 @@ void main() {
   });
 
   group('sendOnEnterDefault', () {
-    test('vira true quando isIOSAppOnMac é true, mesmo com isMobile true', () async {
-      messenger.setMockMethodCallHandler(
-        PlatformInfos.iosAppOnMacChannel,
-        (call) async => true,
-      );
-      await PlatformInfos.initIOSAppOnMac();
-      expect(PlatformInfos.sendOnEnterDefault, isTrue);
-    });
+    test(
+      'vira true quando isIOSAppOnMac é true, mesmo com isMobile true',
+      () async {
+        messenger.setMockMethodCallHandler(
+          PlatformInfos.iosAppOnMacChannel,
+          (call) async => true,
+        );
+        await PlatformInfos.initIOSAppOnMac();
+        expect(PlatformInfos.sendOnEnterDefault, isTrue);
+      },
+    );
 
     test('segue !isMobile quando isIOSAppOnMac é false', () async {
       messenger.setMockMethodCallHandler(
@@ -63,10 +66,7 @@ void main() {
         (call) async => false,
       );
       await PlatformInfos.initIOSAppOnMac();
-      expect(
-        PlatformInfos.sendOnEnterDefault,
-        !PlatformInfos.isMobile,
-      );
+      expect(PlatformInfos.sendOnEnterDefault, !PlatformInfos.isMobile);
     });
   });
 }
