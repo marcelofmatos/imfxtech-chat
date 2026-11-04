@@ -2497,8 +2497,6 @@
     },
     "createNewChat": "Сделать новый чат",
     "reset": "Сброс",
-    "supportFluffyChat": "Поддержать FluffyChat",
-    "support": "Поддержать",
     "setLowPriority": "Установить маленький приоритет",
     "unsetLowPriority": "Отменить низкий приоритет",
     "playSoundOnNotification": "Проиграть звук, когда уведомления",

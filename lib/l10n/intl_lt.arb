@@ -1926,7 +1926,6 @@
         "type": "String",
         "placeholders": {}
     },
-    "decline": "Atmesti",
     "waitingForParticipant": "Laukiama dalyvio...",
     "incomingCall": "Gaunamas skambutis",
     "enterCall": "Įeiti į skambutį",
