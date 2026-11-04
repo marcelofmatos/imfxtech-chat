@@ -122,7 +122,7 @@ class NotificationService: UNNotificationServiceExtension {
                         roomName
                         ?? heroes.map { hero in
                             hero.content.displayname
-                                ?? String(localized: "FluffyChat User")
+                                ?? String(localized: "IMFxTech Chat User")
                         }.joined(separator: ", ")
                     roomAvatarUrl = roomAvatarUrl ?? heroes.first?.content.avatar_url
                 } else {
