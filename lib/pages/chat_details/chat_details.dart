@@ -11,6 +11,7 @@ import 'package:fluffychat/pages/settings/settings.dart';
 import 'package:fluffychat/utils/file_selector.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
+import 'package:fluffychat/utils/room_wallpaper.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_modal_action_popup.dart';
 import 'package:fluffychat/widgets/adaptive_dialogs/show_text_input_dialog.dart';
 import 'package:fluffychat/widgets/future_loading_dialog.dart';
@@ -165,6 +166,31 @@ class ChatDetailsController extends State<ChatDetails> {
       future: () => room!.setAvatar(file),
     );
   }
+
+  Future<void> setRoomWallpaperAction() async {
+    final room = Matrix.of(context).client.getRoomById(roomId!)!;
+    final picked = await selectFiles(context, type: FileType.image);
+    final pickedFile = picked.firstOrNull;
+    if (pickedFile == null) return;
+    if (!mounted) return;
+
+    await showFutureLoadingDialog(
+      context: context,
+      future: () async {
+        final url = await room.client.uploadContent(
+          await pickedFile.readAsBytes(),
+          filename: pickedFile.name,
+        );
+        await room.setRoomWallpaper(RoomWallpaper(url: url));
+      },
+    );
+  }
+
+  void removeRoomWallpaperAction() => showFutureLoadingDialog(
+    context: context,
+    future: () =>
+        Matrix.of(context).client.getRoomById(roomId!)!.setRoomWallpaper(null),
+  );
 
   static const fixedWidth = 360.0;
 

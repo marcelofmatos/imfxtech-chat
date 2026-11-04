@@ -2810,5 +2810,7 @@
         "placeholders": {
             "error": {"type": "String"}
         }
-    }
+    },
+    "chatWallpaperDescription": "Only for you, in this chat. Without it, the wallpaper from Settings is used.",
+    "removeChatWallpaper": "Remove chat wallpaper"
 }

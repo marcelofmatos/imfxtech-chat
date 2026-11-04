@@ -2472,5 +2472,7 @@
     "appDescription": "Mensagens criptografadas, descentralizadas e fáceis de usar.",
     "signIn": "Conectar",
     "homeserverLabel": "Servidor:",
-    "pleaseEnterTheServer": "Informe o servidor"
+    "pleaseEnterTheServer": "Informe o servidor",
+    "chatWallpaperDescription": "Só para você, nesta conversa. Sem ele, vale o plano de fundo das Configurações.",
+    "removeChatWallpaper": "Remover plano de fundo da conversa"
 }

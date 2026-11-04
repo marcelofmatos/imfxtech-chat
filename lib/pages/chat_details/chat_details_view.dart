@@ -7,6 +7,7 @@ import 'package:fluffychat/config/app_config.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:fluffychat/pages/chat_details/chat_details.dart';
 import 'package:fluffychat/pages/chat_details/participant_list_item.dart';
+import 'package:fluffychat/pages/chat_details/room_wallpaper_list_tile.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:fluffychat/utils/verified_room_extension.dart';
 import 'package:fluffychat/widgets/avatar.dart';
@@ -329,6 +330,11 @@ class ChatDetailsView extends StatelessWidget {
                             ),
                           ),
                         ],
+                        RoomWallpaperListTile(
+                          room: room,
+                          onSet: controller.setRoomWallpaperAction,
+                          onRemove: controller.removeRoomWallpaperAction,
+                        ),
                         Divider(color: theme.dividerColor),
                         ListTile(
                           title: Text(

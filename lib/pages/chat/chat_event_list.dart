@@ -13,9 +13,9 @@ import 'package:fluffychat/pages/chat/encryption_info.dart';
 import 'package:fluffychat/pages/chat/events/message.dart';
 import 'package:fluffychat/pages/chat/seen_by_row.dart';
 import 'package:fluffychat/pages/chat/typing_indicators.dart';
-import 'package:fluffychat/utils/account_config.dart';
 import 'package:fluffychat/utils/matrix_sdk_extensions/filtered_timeline_extension.dart';
 import 'package:fluffychat/utils/platform_infos.dart';
+import 'package:fluffychat/utils/room_wallpaper.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:matrix/matrix_api_lite/model/event_types.dart';
 import 'package:scroll_to_index/scroll_to_index.dart';
@@ -52,8 +52,7 @@ class ChatEventList extends StatelessWidget {
       thisEventsKeyMap[events[i].eventId] = i;
     }
 
-    final hasWallpaper =
-        controller.room.client.applicationAccountConfig.wallpaperUrl != null;
+    final hasWallpaper = controller.room.chatWallpaper != null;
 
     return SelectionArea(
       child: MediaQuery(
