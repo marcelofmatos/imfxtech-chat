@@ -123,7 +123,11 @@ enum AppSettings<T> {
     }
 
     if (store.getBool(AppSettings.sendOnEnter.key) == null) {
-      await store.setBool(AppSettings.sendOnEnter.key, !PlatformInfos.isMobile);
+      await PlatformInfos.initIOSAppOnMac();
+      await store.setBool(
+        AppSettings.sendOnEnter.key,
+        PlatformInfos.sendOnEnterDefault,
+      );
     }
     if (store.getBool(AppSettings.doubleTapToReact.key) == null) {
       await store.setBool(

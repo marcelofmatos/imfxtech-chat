@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:fluffychat/config/setting_keys.dart';
 import 'package:fluffychat/l10n/l10n.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -26,6 +27,34 @@ abstract class PlatformInfos {
   static bool get isCupertinoStyle => isIOS || isMacOS;
 
   static bool get isMobile => isAndroid || isIOS;
+
+  static const MethodChannel iosAppOnMacChannel = MethodChannel(
+    'com.imfxtech.chat/ios_app_on_mac',
+  );
+
+  static bool _isIOSAppOnMac = false;
+
+  /// True when this iOS binary is running on an Apple Silicon Mac via
+  /// "Designed for iPad" (not Mac Catalyst) -- `Platform.isIOS` stays true in
+  /// that mode, so [isMobile] alone can't tell a real iPhone/iPad apart from
+  /// a Mac. Populated once by [initIOSAppOnMac] during app startup; false
+  /// until then, and on every platform other than iOS (the native channel is
+  /// only registered in the iOS Runner).
+  static bool get isIOSAppOnMac => _isIOSAppOnMac;
+
+  static Future<void> initIOSAppOnMac() async {
+    try {
+      _isIOSAppOnMac =
+          await iosAppOnMacChannel.invokeMethod<bool>('isIOSAppOnMac') ??
+          false;
+    } catch (_) {
+      _isIOSAppOnMac = false;
+    }
+  }
+
+  /// Whether "Enter sends" should default to on: true on desktop platforms,
+  /// and for an iOS build running on a Mac (see [isIOSAppOnMac]).
+  static bool get sendOnEnterDefault => !isMobile || isIOSAppOnMac;
 
   /// For desktops which don't support ChachedNetworkImage yet
   static bool get isBetaDesktop => isWindows || isLinux;
