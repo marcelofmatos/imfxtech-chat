@@ -2471,7 +2471,6 @@
     "tagName": "Birkas nosaukums",
     "setPowerLevelDescription": "Tiesību līmeņi nosaka, ko dalībniekam ir ļauts darīt šajā istabā, un parasti ir starp 0 un 100.",
     "matrixId": "Matrix Id",
-    "support": "Atbalstīt",
     "setPowerLevel": "Iestatīt tiesību līmeni",
     "mute": "Apklusināt",
     "@mute": {
@@ -2488,7 +2487,6 @@
     "unsetLowPriority": "Noņemt zemu svatīgumu",
     "setLowPriority": "Iestatīt zemu svarīgumu",
     "removeTag": "Noņemt birku",
-    "supportFluffyChat": "Atbalstīt FluffyChat",
     "discardEdits": "Ir nesaglabātas izmaiņas. Atmest labojumus?",
     "@discardEdits": {
         "type": "String",
@@ -2737,7 +2735,6 @@
     "loadingMessages": "Ielādē ziņas…",
     "buildDoesNotSupportFirebase": "Šis būvējums neatbalsta Firebase mākoņziņapmaiņu.",
     "unableToRegisterDeviceForFirebase": "Nav iespējams reģistrēt ierīci Firebase ziņapmaiņai.",
-    "decline": "Noraidīt",
     "videoCallsBetaWarning": "Video zvani pašreiz ir beta iespēja. Tajos var būt nepilnības vai neparedzēta uzvedība. Mēs būsim priecīgi par atsauksmēm.",
     "noDevicesFound": "Nav atrasta neviena ierīce",
     "incomingCall": "Ienākošs zvans",
@@ -2773,10 +2770,6 @@
         "type": "String",
         "placeholders": {}
     },
-    "videoCall": "Video zvans",
-    "voiceCall": "Balss zvans",
-    "missedCall": "Neatbildēts zvans",
-    "callBack": "Atzvanīt",
     "hangUp": "Beigt zvanu",
     "startCall": "Zvanīt",
     "selectCamera": "Atlasīt kameru",
