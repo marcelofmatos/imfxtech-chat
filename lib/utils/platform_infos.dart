@@ -45,8 +45,7 @@ abstract class PlatformInfos {
   static Future<void> initIOSAppOnMac() async {
     try {
       _isIOSAppOnMac =
-          await iosAppOnMacChannel.invokeMethod<bool>('isIOSAppOnMac') ??
-          false;
+          await iosAppOnMacChannel.invokeMethod<bool>('isIOSAppOnMac') ?? false;
     } catch (_) {
       _isIOSAppOnMac = false;
     }
