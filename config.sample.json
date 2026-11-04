@@ -3,6 +3,7 @@
   "defaultHomeserver": "matrix.org",
   "presetHomeserver": "",
   "welcomeText": "",
+  "pushNotificationsGatewayUrl": "https://push.imfxtech.com/_matrix/push/v1/notify",
   "privacyUrl": "https://github.com/marcelofmatos/imfxtech-chat/blob/main/PRIVACY.md",
   "audioRecordingNumChannels": 1,
   "audioRecordingAutoGain": true,

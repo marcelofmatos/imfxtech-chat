@@ -191,6 +191,10 @@ class BackgroundPush {
       Logs().w('[Push] Missing required push credentials');
       return;
     }
+    if (!isValidGatewayUrl(gatewayUrl)) {
+      Logs().w('[Push] Invalid push gateway URL: "$gatewayUrl"');
+      return;
+    }
 
     if (pushers.any(
       (currentPusher) =>
@@ -257,6 +261,14 @@ class BackgroundPush {
     } catch (e, s) {
       Logs().e('[Push] Unable to set pushers', e, s);
     }
+  }
+
+  /// O homeserver só aceita pushers `http` com URL absoluta http(s).
+  static bool isValidGatewayUrl(String url) {
+    final uri = Uri.tryParse(url);
+    return uri != null &&
+        (uri.scheme == 'http' || uri.scheme == 'https') &&
+        uri.host.isNotEmpty;
   }
 
   final pusherDataMessageFormat = Platform.isAndroid;
