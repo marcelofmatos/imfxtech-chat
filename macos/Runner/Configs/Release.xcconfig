@@ -1,2 +1,11 @@
 #include "../../Flutter/Flutter-Release.xcconfig"
 #include "Warnings.xcconfig"
+
+// webcrypto 0.6.1 (dependência transitiva) baixa e compila o BoringSSL
+// vendorizado via CMake nativo. A build para x86_64 falha no linker
+// ("Undefined symbols for architecture x86_64": fiat_p256_adx_mul/square) --
+// bug upstream do BoringSSL nas variantes assembly ADX do P-256, sem fix
+// lançado no webcrypto.dart (github.com/google/webcrypto.dart) até a data
+// desta mudança. arm64 não passa por esse caminho de código. Revisitar (e
+// remover esta linha) quando houver uma versão do webcrypto com o fix.
+EXCLUDED_ARCHS[sdk=macosx*] = x86_64

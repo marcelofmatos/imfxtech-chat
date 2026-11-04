@@ -296,8 +296,10 @@ jobs:
 
   build-macos:
     needs: bump-version
-    # Mesmo runner do build-ios (ver comentário lá). O build release do macOS
-    # é universal (arm64 + x86_64), então o runner Intel não limita o binário.
+    # Mesmo runner do build-ios (ver comentário lá, capacidade do runner arm64
+    # é instável). Build é só arm64 (ver EXCLUDED_ARCHS em Release.xcconfig: o
+    # webcrypto trava no x86_64, bug do BoringSSL vendorizado) -- o runner
+    # Intel só compila cruzado para arm64, não roda o binário final.
     runs-on: macos-26-intel
     outputs:
       signed: ${{ steps.signing.outputs.enabled }}
@@ -319,7 +321,7 @@ jobs:
           cache: true
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          targets: aarch64-apple-darwin
       - run: flutter pub get
       - name: Check macOS signing secrets
         id: signing

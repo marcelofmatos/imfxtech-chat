@@ -55,6 +55,16 @@ void main() {
     expect(workflow, contains(r'imfxtech-chat-$NEW_VERSION-macos.dmg'));
   });
 
+  test(
+    'build release do macOS exclui x86_64 (BoringSSL do webcrypto trava nessa arquitetura)',
+    () {
+      final releaseConfig = File(
+        'macos/Runner/Configs/Release.xcconfig',
+      ).readAsStringSync();
+      expect(releaseConfig, contains('EXCLUDED_ARCHS[sdk=macosx*] = x86_64'));
+    },
+  );
+
   test('falha do macOS não bloqueia a GitHub Release', () {
     final workflow = File(
       '.github/workflows/release-and-build.yml',

@@ -26,9 +26,11 @@ APK e do IPA.
 ## Como gerar
 
 1. Em **Actions → Release and Build → Run workflow**, escolher o tipo de bump.
-2. O job `build-macos` roda `flutter build macos --release` (binário universal
-   arm64 + x86_64) com assinatura ad-hoc e empacota o `.app` num `.dmg` com
-   atalho para `/Applications` (`hdiutil create`).
+2. O job `build-macos` roda `flutter build macos --release` (binário **arm64**
+   — `EXCLUDED_ARCHS[sdk=macosx*] = x86_64` em `Release.xcconfig`, porque o
+   BoringSSL vendorizado pelo `webcrypto` trava ao compilar para x86_64; ver
+   comentário no xcconfig) com assinatura ad-hoc e empacota o `.app` num
+   `.dmg` com atalho para `/Applications` (`hdiutil create`).
 3. Se o secret `MACOS_CERTIFICATE_P12_BASE64` existir, o job reassina o `.app`
    com o Developer ID (hardened runtime e `Release.entitlements`), assina o
    `.dmg`, envia para notarização (`xcrun notarytool`) e grampeia o ticket
@@ -118,7 +120,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    A["Checkout da tag vX.Y.Z"] --> B["Flutter + Rust arm64 e x86_64<br/>flutter pub get"]
+    A["Checkout da tag vX.Y.Z"] --> B["Flutter + Rust arm64<br/>flutter pub get"]
     B --> C{"MACOS_CERTIFICATE_P12_BASE64<br/>configurado?"}
     C -- não --> W["Aviso no log"]
     C -- sim --> S0["Marca caminho assinado"]
@@ -159,7 +161,7 @@ sequenceDiagram
     rect rgb(240, 255, 240)
     note over M,NS: Execução, repetível
     M->>GH: workflow_dispatch com bump
-    GH->>GH: build-macos compila o .app universal
+    GH->>GH: build-macos compila o .app (arm64)
     GH->>GH: Reassina o .app com Developer ID e hardened runtime
     GH->>GH: Cria e assina o .dmg
     GH->>NS: notarytool envia o .dmg com a API key
