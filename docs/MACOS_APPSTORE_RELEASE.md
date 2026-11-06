@@ -49,6 +49,21 @@ testar o primeiro upload de ponta a ponta no próximo `workflow_dispatch`.**
 
 O job já roda o caminho assinado completo na próxima `workflow_dispatch`.
 
+Ajustes antes do primeiro upload (revisão de 2026-11-06):
+
+- O build usa a mesma assinatura ad-hoc do `build-macos`
+  (`FLUTTER_XCODE_CODE_SIGN_STYLE=Manual`, identidade `-`). Sem isso o
+  `flutter build macos` tenta a assinatura automática do team e falha no CI.
+- O `.app` é assinado com `macos/Runner/Store.entitlements`: as mesmas
+  permissões de `Release.entitlements` mais `com.apple.application-identifier`
+  e `com.apple.developer.team-identifier`, que a App Store e o TestFlight
+  exigem. O `.dmg` continua com `Release.entitlements`.
+- `Info.plist` do macOS ganhou `LSApplicationCategoryType` (o
+  `INFOPLIST_KEY_*` do projeto é ignorado sem `GENERATE_INFOPLIST_FILE`) e os
+  textos de uso de câmera, microfone e localização, iguais aos do iOS.
+- Só arm64, como o `.dmg`. O `LSMinimumSystemVersion` é 12.2, acima do
+  mínimo de 12.0 que a App Store pede para app só arm64.
+
 ## Decisões deste desenho
 
 - **Job paralelo, não bloqueante.** `build-macos-store` roda junto com

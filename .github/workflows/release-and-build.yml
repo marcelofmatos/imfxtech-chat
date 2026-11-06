@@ -422,8 +422,15 @@ jobs:
 
   build-macos-store:
     needs: bump-version
-    # Mesmo runner dos outros jobs macOS (ver comentário no build-ios).
+    # Mesmo runner dos outros jobs macOS (ver comentário no build-ios). Também
+    # só arm64, como o build-macos (EXCLUDED_ARCHS em Release.xcconfig).
     runs-on: macos-26-intel
+    env:
+      # Mesmo motivo do build-macos: o build sai com assinatura ad-hoc e o .app
+      # é reassinado com o certificado Mac App Distribution depois.
+      FLUTTER_XCODE_CODE_SIGN_STYLE: Manual
+      FLUTTER_XCODE_CODE_SIGN_IDENTITY: "-"
+      FLUTTER_XCODE_DEVELOPMENT_TEAM: ""
     steps:
       - uses: actions/checkout@v7
         with:
@@ -434,7 +441,7 @@ jobs:
           cache: true
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          targets: aarch64-apple-darwin
       - run: flutter pub get
       - name: Check Mac App Store signing secrets
         id: signing
@@ -496,14 +503,14 @@ jobs:
         run: |
           APP_PATH=$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -n 1)
           echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
-      - name: Sign app with Apple Distribution
+      - name: Sign app with Mac App Distribution
         if: steps.signing.outputs.enabled == 'true'
         run: |
           cp profile.provisionprofile "$APP_PATH/Contents/embedded.provisionprofile"
           find "$APP_PATH/Contents/Frameworks" -depth \( -name '*.framework' -o -name '*.dylib' \) \
             -exec codesign --force --timestamp --options runtime --sign "$APP_IDENTITY" {} \;
           codesign --force --timestamp --options runtime \
-            --entitlements macos/Runner/Release.entitlements \
+            --entitlements macos/Runner/Store.entitlements \
             --sign "$APP_IDENTITY" "$APP_PATH"
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
       - name: Package signed .pkg installer
