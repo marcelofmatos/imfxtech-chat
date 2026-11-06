@@ -22,12 +22,22 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Open the camera and take a picture to share them with your contacts on IMFxTech Chat.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>$(PRODUCT_COPYRIGHT)</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Share your location with your contacts in IMFxTech Chat.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Share your location with your contacts in IMFxTech Chat.</string>
 	<key>NSMainNibFile</key>
 	<string>MainMenu</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record voice message and share them with your contacts on IMFxTech Chat.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 </dict>
