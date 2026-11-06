@@ -38,7 +38,13 @@ APK e do IPA.
 4. Sem esse secret, o `.dmg` sai sem Developer ID e sem notarização. O log do
    job mostra um aviso e a nota da release diz que o Gatekeeper vai bloquear a
    primeira abertura (botão direito → Abrir contorna).
-5. O macOS **não bloqueia** a release: se o build ou a notarização falharem,
+5. A espera pela notarização fica em `scripts/notarize-dmg.sh`: envia com até
+   3 tentativas e consulta o status a cada 30 s por até 90 min. Queda de rede
+   vira nova tentativa (o `notarytool submit --wait` derrubou a v1.1.5 com
+   timeout). Só `Invalid`/`Rejected` (o log da Apple vai para o job) ou o tempo
+   limite falham. A primeira notarização de um certificado Developer ID novo
+   pode levar horas; nesse caso a submission continua na Apple e o ID sai no log.
+6. O macOS **não bloqueia** a release: se o build ou a notarização falharem,
    o `create-release` roda mesmo assim (Android e iOS já foram para as lojas)
    e publica a GitHub Release só com APK e IPA, sem o `.dmg` nem a linha de
    macOS nas notas.
@@ -133,7 +139,7 @@ flowchart TD
     E -- não --> H
     H --> I{"Assinado?"}
     I -- sim --> J["codesign do .dmg"]
-    J --> K["notarytool submit --wait<br/>com a API key ASC"]
+    J --> K["scripts/notarize-dmg.sh<br/>envia com a API key ASC e espera"]
     K --> L["stapler staple"]
     L --> M["upload-artifact"]
     I -- não --> M
@@ -165,7 +171,10 @@ sequenceDiagram
     GH->>GH: Reassina o .app com Developer ID e hardened runtime
     GH->>GH: Cria e assina o .dmg
     GH->>NS: notarytool envia o .dmg com a API key
-    NS-->>GH: Aceito
+    loop até Accepted, Invalid ou 90 min
+        GH->>NS: notarytool info
+        NS-->>GH: status, ou timeout de rede e nova tentativa
+    end
     GH->>GH: stapler grava o ticket no .dmg
     GH->>GH: create-release anexa o .dmg à release
     end

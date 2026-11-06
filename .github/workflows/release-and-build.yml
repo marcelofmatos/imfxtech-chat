@@ -403,12 +403,8 @@ jobs:
           codesign --force --timestamp --sign "$SIGNING_IDENTITY" "$DMG"
           mkdir -p ~/.private_keys
           echo "$ASC_KEY_CONTENT" | base64 -d > ~/.private_keys/AuthKey_$ASC_KEY_ID.p8
-          xcrun notarytool submit "$DMG" \
-            --key ~/.private_keys/AuthKey_$ASC_KEY_ID.p8 \
-            --key-id "$ASC_KEY_ID" \
-            --issuer "$ASC_ISSUER_ID" \
-            --wait
-          xcrun stapler staple "$DMG"
+          # Espera tolerante a queda de rede (o `--wait` derrubou a v1.1.5).
+          ASC_KEY_PATH=~/.private_keys/AuthKey_$ASC_KEY_ID.p8 scripts/notarize-dmg.sh "$DMG"
 
       - uses: actions/upload-artifact@v4
         with:
