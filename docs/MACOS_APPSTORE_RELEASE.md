@@ -22,8 +22,8 @@ As duas pipelines builadam o mesmo código e podem conviver no mesmo
 
 ## Status (atualizado 2026-11-06)
 
-**Implementado no workflow; certificados e profile já gerados no Developer
-Portal; faltam só os secrets no GitHub e a plataforma no App Store Connect.**
+**Implementado, certificados, secrets e plataforma no lugar — pronto pra
+testar o primeiro upload de ponta a ponta no próximo `workflow_dispatch`.**
 
 - ✅ Job `build-macos-store` em `.github/workflows/release-and-build.yml`.
 - ✅ App ID `com.imfxtech.chat` **já suportava macOS** — confirmado ao vivo em
@@ -35,20 +35,19 @@ Portal; faltam só os secrets no GitHub e a plataforma no App Store Connect.**
   `3rd Party Mac Developer Installer: Don Silva Martins (Q9FX293J5N)`).
 - ✅ Provisioning profile **Mac App Store** "IMFxTech Chat macOS App Store"
   gerado pra `com.imfxtech.chat`.
-- ⏳ Os `.p12`/profile estão em
-  [imfxtech-chat-secrets-backup/macos-appstore/](file:///home/marcelo/HD3/botDon/imfxtech-chat-secrets-backup/macos-appstore/README.md),
-  mas **os 5 secrets do GitHub ainda não foram criados** — `gh secret set` foi
-  bloqueado pelo classificador de permissões da sessão (escrita em secret
-  store pede aprovação explícita). Ver o README da pasta para os comandos
-  exatos.
-- ⏳ **App Store Connect**: plataforma macOS ainda não foi adicionada à ficha
-  do app (Apple ID `6810974674`) — cheguei a abrir o diálogo "Adicionar
-  plataforma" pra conferir o fluxo, mas não confirmei por ser uma mudança na
-  ficha pública do app em produção.
+- ✅ Os 5 secrets já existem no repositório (`gh secret set`, autorizado pelo
+  Marcelo em 2026-11-06). Backup local em
+  [imfxtech-chat-secrets-backup/macos-appstore/](file:///home/marcelo/HD3/botDon/imfxtech-chat-secrets-backup/macos-appstore/README.md).
+- ✅ **App Store Connect**: plataforma macOS adicionada à ficha do app
+  (Apple ID `6810974674`, autorizado pelo Marcelo em 2026-11-06) — criou "App
+  para macOS Versão 1.0" com status "Preparar para envio". **Não** cliquei em
+  "Adicionar para revisão": isso manda o app pra análise da Apple, passo além
+  do que foi pedido (confirmar a plataforma).
+- ⏳ **Export Compliance** da plataforma macOS e demais metadados da versão
+  1.0 (screenshots, descrição) ainda não foram preenchidos — normalmente só
+  são exigidos no momento de enviar pra revisão, não antes.
 
-Sem os secrets, o job só roda o checkout e sai sem fazer nada — mesmo padrão
-que `build-ios` e `build-macos` usaram enquanto os certificados deles não
-existiam.
+O job já roda o caminho assinado completo na próxima `workflow_dispatch`.
 
 ## Decisões deste desenho
 
