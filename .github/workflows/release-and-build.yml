@@ -24,6 +24,14 @@ name: Release and Build
 # Developer ID secrets exist it is signed and notarized (reusing the ASC_*
 # API key); until then the .dmg is unsigned. See docs/MACOS_RELEASE.md:
 #   MACOS_CERTIFICATE_P12_BASE64, MACOS_CERTIFICATE_PASSWORD
+#
+# macOS is separately packaged as a .pkg and uploaded straight to App Store
+# Connect (Mac App Store) once its signing secrets exist; until then that job
+# just checks out and exits — it is not required for the GitHub Release. See
+# docs/MACOS_APPSTORE_RELEASE.md:
+#   MACOS_INSTALLER_CERTIFICATE_P12_BASE64, MACOS_INSTALLER_CERTIFICATE_PASSWORD,
+#   MACOS_PROVISIONING_PROFILE_STORE_BASE64
+#   (reuses IOS_CERTIFICATE_P12_BASE64 and ASC_KEY_ID/ASC_ISSUER_ID/ASC_KEY_CONTENT)
 
 on:
   workflow_dispatch:
@@ -409,6 +417,128 @@ jobs:
         run: |
           security delete-keychain build.keychain || true
           rm -f certificate.p12 ~/.private_keys/AuthKey_*.p8
+
+  build-macos-store:
+    needs: bump-version
+    # Mesmo runner dos outros jobs macOS (ver comentário no build-ios).
+    runs-on: macos-26-intel
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.bump-version.outputs.tag }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version-file: .tool_versions.yaml
+          cache: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - run: flutter pub get
+      - name: Check Mac App Store signing secrets
+        id: signing
+        env:
+          MACOS_INSTALLER_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_INSTALLER_CERTIFICATE_P12_BASE64 }}
+          MACOS_PROVISIONING_PROFILE_STORE_BASE64: ${{ secrets.MACOS_PROVISIONING_PROFILE_STORE_BASE64 }}
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+        run: |
+          if [ -n "$MACOS_INSTALLER_CERTIFICATE_P12_BASE64" ] && [ -n "$MACOS_PROVISIONING_PROFILE_STORE_BASE64" ] && [ -n "$IOS_CERTIFICATE_P12_BASE64" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Secrets da Mac App Store ausentes: job pulado (ver docs/MACOS_APPSTORE_RELEASE.md)."
+          fi
+
+      # --- Signed path (used once the secrets in docs/MACOS_APPSTORE_RELEASE.md exist) ---
+      - name: Import Apple Distribution and Mac Installer Distribution certificates
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          MACOS_INSTALLER_CERTIFICATE_P12_BASE64: ${{ secrets.MACOS_INSTALLER_CERTIFICATE_P12_BASE64 }}
+          MACOS_INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_INSTALLER_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" store.keychain
+          security set-keychain-settings -lut 21600 store.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" store.keychain
+          echo "$IOS_CERTIFICATE_P12_BASE64" | base64 -d > app.p12
+          echo "$MACOS_INSTALLER_CERTIFICATE_P12_BASE64" | base64 -d > installer.p12
+          security import app.p12 -k store.keychain -P "$IOS_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security import installer.p12 -k store.keychain -P "$MACOS_INSTALLER_CERTIFICATE_PASSWORD" -T /usr/bin/productbuild
+          EXISTING_KEYCHAINS=$(security list-keychains -d user | sed 's/"//g')
+          security list-keychains -d user -s store.keychain $EXISTING_KEYCHAINS
+          security set-key-partition-list -S apple-tool:,apple:,codesign:,productbuild: -s -k "$KEYCHAIN_PASSWORD" store.keychain
+          rm app.p12 installer.p12
+          APP_IDENTITY=$(security find-identity -v -p codesigning store.keychain | grep "Apple Distribution" | head -n 1 | awk '{print $2}')
+          INSTALLER_IDENTITY=$(security find-identity -v store.keychain | grep "Mac Installer Distribution" | head -n 1 | awk '{print $2}')
+          [ -n "$APP_IDENTITY" ] || { echo "::error::Apple Distribution não encontrado no .p12 do iOS"; exit 1; }
+          [ -n "$INSTALLER_IDENTITY" ] || { echo "::error::Mac Installer Distribution não encontrado no .p12"; exit 1; }
+          echo "APP_IDENTITY=$APP_IDENTITY" >> "$GITHUB_ENV"
+          echo "INSTALLER_IDENTITY=$INSTALLER_IDENTITY" >> "$GITHUB_ENV"
+      - name: Install Mac App Store provisioning profile
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          MACOS_PROVISIONING_PROFILE_STORE_BASE64: ${{ secrets.MACOS_PROVISIONING_PROFILE_STORE_BASE64 }}
+        run: |
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "$MACOS_PROVISIONING_PROFILE_STORE_BASE64" | base64 -d \
+            > "$HOME/Library/MobileDevice/Provisioning Profiles/macos-store.provisionprofile"
+          echo "$MACOS_PROVISIONING_PROFILE_STORE_BASE64" | base64 -d > profile.provisionprofile
+      - name: Build macOS app
+        if: steps.signing.outputs.enabled == 'true'
+        run: flutter build macos --release
+      - name: Locate app bundle
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          APP_PATH=$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' | head -n 1)
+          echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+      - name: Sign app with Apple Distribution
+        if: steps.signing.outputs.enabled == 'true'
+        run: |
+          cp profile.provisionprofile "$APP_PATH/Contents/embedded.provisionprofile"
+          find "$APP_PATH/Contents/Frameworks" -depth \( -name '*.framework' -o -name '*.dylib' \) \
+            -exec codesign --force --timestamp --options runtime --sign "$APP_IDENTITY" {} \;
+          codesign --force --timestamp --options runtime \
+            --entitlements macos/Runner/Release.entitlements \
+            --sign "$APP_IDENTITY" "$APP_PATH"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+      - name: Package signed .pkg installer
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          NEW_VERSION: ${{ needs.bump-version.outputs.version }}
+        run: |
+          mkdir -p build/macos/pkg
+          productbuild --component "$APP_PATH" /Applications \
+            --sign "$INSTALLER_IDENTITY" \
+            "build/macos/pkg/imfxtech-chat-$NEW_VERSION-macos-appstore.pkg"
+      - name: Upload to App Store Connect
+        if: steps.signing.outputs.enabled == 'true'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+          NEW_VERSION: ${{ needs.bump-version.outputs.version }}
+        run: |
+          mkdir -p ~/.private_keys
+          echo "$ASC_KEY_CONTENT" | base64 -d > ~/.private_keys/AuthKey_$ASC_KEY_ID.p8
+          xcrun altool --upload-app --type macos \
+            -f "build/macos/pkg/imfxtech-chat-$NEW_VERSION-macos-appstore.pkg" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID"
+
+      # Not a GitHub Release asset: a Mac App Store .pkg isn't notarized on its
+      # own (trust comes from the store receipt), so Gatekeeper blocks it for
+      # anyone who downloads it outside the store. Kept only for audit.
+      - uses: actions/upload-artifact@v4
+        if: steps.signing.outputs.enabled == 'true'
+        with:
+          name: imfxtech-chat-macos-appstore
+          path: build/macos/pkg/imfxtech-chat-*-appstore.pkg
+      - name: Clean up signing material
+        if: always() && steps.signing.outputs.enabled == 'true'
+        run: |
+          security delete-keychain store.keychain || true
+          rm -f app.p12 installer.p12 profile.provisionprofile ~/.private_keys/AuthKey_*.p8
 
   create-release:
     needs: [bump-version, build-android, build-ios, build-macos]
