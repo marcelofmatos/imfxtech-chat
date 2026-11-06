@@ -20,14 +20,35 @@ existe em `docs/MACOS_RELEASE.md`:
 As duas pipelines builadam o mesmo código e podem conviver no mesmo
 `workflow_dispatch`: uma gera o instalador direto, a outra alimenta a loja.
 
-## Status
+## Status (atualizado 2026-11-06)
 
-**Desenhado e implementado no workflow, gated por secrets ausentes — ainda não
-testado de ponta a ponta.** O job já está em
-`.github/workflows/release-and-build.yml` (ver seção "Onde cada coisa está"),
-mas sem os secrets abaixo ele só roda o checkout e sai sem fazer nada —
-mesmo padrão que `build-ios` e `build-macos` usaram enquanto os certificados
-deles não existiam.
+**Implementado no workflow; certificados e profile já gerados no Developer
+Portal; faltam só os secrets no GitHub e a plataforma no App Store Connect.**
+
+- ✅ Job `build-macos-store` em `.github/workflows/release-and-build.yml`.
+- ✅ App ID `com.imfxtech.chat` **já suportava macOS** — confirmado ao vivo em
+  Identifiers (`Platform: iOS, iPadOS, macOS, tvOS, watchOS, visionOS`), nada
+  precisou mudar lá.
+- ✅ Certificado **Mac App Distribution** gerado (expira 2027/11/06, CN `3rd
+  Party Mac Developer Application: Don Silva Martins (Q9FX293J5N)`).
+- ✅ Certificado **Mac Installer Distribution** gerado (expira 2027/11/06, CN
+  `3rd Party Mac Developer Installer: Don Silva Martins (Q9FX293J5N)`).
+- ✅ Provisioning profile **Mac App Store** "IMFxTech Chat macOS App Store"
+  gerado pra `com.imfxtech.chat`.
+- ⏳ Os `.p12`/profile estão em
+  [imfxtech-chat-secrets-backup/macos-appstore/](file:///home/marcelo/HD3/botDon/imfxtech-chat-secrets-backup/macos-appstore/README.md),
+  mas **os 5 secrets do GitHub ainda não foram criados** — `gh secret set` foi
+  bloqueado pelo classificador de permissões da sessão (escrita em secret
+  store pede aprovação explícita). Ver o README da pasta para os comandos
+  exatos.
+- ⏳ **App Store Connect**: plataforma macOS ainda não foi adicionada à ficha
+  do app (Apple ID `6810974674`) — cheguei a abrir o diálogo "Adicionar
+  plataforma" pra conferir o fluxo, mas não confirmei por ser uma mudança na
+  ficha pública do app em produção.
+
+Sem os secrets, o job só roda o checkout e sai sem fazer nada — mesmo padrão
+que `build-ios` e `build-macos` usaram enquanto os certificados deles não
+existiam.
 
 ## Decisões deste desenho
 
@@ -37,12 +58,13 @@ deles não existiam.
   Store Connect. Um `.pkg` assinado pra loja não passa pelo Gatekeeper fora
   dela (sem notarização própria; a confiança vem do recibo da loja), então
   anexá-lo à Release não ajudaria quem baixa direto do GitHub.
-- **Reaproveita o certificado Apple Distribution do iOS**
-  (`IOS_CERTIFICATE_P12_BASE64` / `IOS_CERTIFICATE_PASSWORD`). Desde que a
-  Apple unificou o tipo de certificado em 2019, **Apple Distribution** assina
-  pra iOS App Store *e* Mac App Store — e foi esse o tipo gerado no passo 2 de
-  `docs/IOS_RELEASE_SIGNING.md` (não o antigo "iOS Distribution"). Não cria
-  secret novo pra isso.
+- **Não reaproveita o certificado do iOS.** A suposição original deste
+  desenho era usar `IOS_CERTIFICATE_P12_BASE64` (achando que era o tipo
+  unificado "Apple Distribution", válido pra iOS *e* macOS). Checando ao vivo
+  no portal, o certificado existente é do tipo legado **iOS Distribution**
+  (plataforma só iOS/iPadOS/watchOS/visionOS) — não assina macOS. Por isso
+  foi gerado um certificado **dedicado**, Mac App Distribution, só pra esse
+  job (não mexe no certificado do iOS nem no job `build-ios`).
 - **Entitlements sem mudança.** `macos/Runner/Release.entitlements` já tem
   `com.apple.security.app-sandbox = true` — exigido pela Mac App Store e
   nenhuma das outras entitlements (câmera, áudio, rede, localização, arquivos
@@ -53,53 +75,50 @@ deles não existiam.
   um provisioning profile **Mac App Store** pro bundle `com.imfxtech.chat`
   (perfil é por plataforma — o profile do iOS não serve aqui).
 
-## Pontos a confirmar antes do primeiro run real
+## Pontos ainda em aberto
 
-1. **Plataforma macOS no App ID.** `com.imfxtech.chat` já existe no portal
-   (criado pro iOS). Falta confirmar, em Identifiers → `com.imfxtech.chat`,
-   que a plataforma **macOS** está habilitada — se o App ID foi criado só
-   como "iOS, tvOS, watchOS", é preciso habilitar macOS antes de gerar o
-   profile do passo 3 abaixo.
+1. ~~Plataforma macOS no App ID~~ — **resolvido**, já estava habilitada.
 2. **App Store Connect: adicionar a plataforma macOS ao app existente** (o
-   mesmo "IMFxTech Chat", Apple ID `6810974674`) ou decidir se vira um
-   registro separado. O caminho recomendado é a mesma ficha, plataforma
-   adicional — evita duplicar categoria/descrição/política de privacidade.
+   mesmo "IMFxTech Chat", Apple ID `6810974674`). O diálogo "Adicionar
+   plataforma" (em Distribuição → "+" ao lado de "App para iOS") já confirma
+   que dá pra adicionar macOS à mesma ficha — evita duplicar
+   categoria/descrição/política de privacidade. Falta só confirmar e enviar.
 3. **TestFlight for Mac vs. direto pra revisão.** Depois do primeiro
    `altool --upload-app` bem-sucedido, alguém com acesso ao App Store Connect
    decide manualmente se o build vai pra TestFlight (beta) ou é anexado a uma
    versão e enviado pra revisão — igual ao iOS, o job só faz o upload, não
    submete.
 4. **Export Compliance.** Mesma declaração de criptografia E2E já preenchida
-   pro iOS deve ser repetida (ou confirmada) pra plataforma macOS do app.
+   pro iOS deve ser repetida (ou confirmada) pra plataforma macOS do app —
+   normalmente aparece ao adicionar a plataforma ou no primeiro envio.
 
 ## Secrets
 
-| Secret | Conteúdo | Novo? |
+| Secret | Conteúdo | Status |
 |---|---|---|
-| `MACOS_INSTALLER_CERTIFICATE_P12_BASE64` | `.p12` do certificado **Mac Installer Distribution** com a chave privada, em base64 | **sim** |
-| `MACOS_INSTALLER_CERTIFICATE_PASSWORD` | senha do `.p12` acima | **sim** |
-| `MACOS_PROVISIONING_PROFILE_STORE_BASE64` | profile **Mac App Store** de `com.imfxtech.chat` (plataforma macOS), em base64 | **sim** |
-| `IOS_CERTIFICATE_P12_BASE64` / `IOS_CERTIFICATE_PASSWORD` | certificado **Apple Distribution**, já usado no `build-ios` | não, reaproveitado |
-| `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT` | chave de API do App Store Connect, já usada no upload do iOS e na notarização do `.dmg` | não, reaproveitado |
+| `MACOS_APPSTORE_CERTIFICATE_P12_BASE64` | `.p12` do certificado **Mac App Distribution** (assina o `.app`) | gerado, falta subir no GitHub |
+| `MACOS_APPSTORE_CERTIFICATE_PASSWORD` | senha do `.p12` acima | gerado, falta subir no GitHub |
+| `MACOS_INSTALLER_CERTIFICATE_P12_BASE64` | `.p12` do certificado **Mac Installer Distribution** (assina o `.pkg`) | gerado, falta subir no GitHub |
+| `MACOS_INSTALLER_CERTIFICATE_PASSWORD` | senha do `.p12` acima | gerado, falta subir no GitHub |
+| `MACOS_PROVISIONING_PROFILE_STORE_BASE64` | profile **Mac App Store** de `com.imfxtech.chat` | gerado, falta subir no GitHub |
+| `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_CONTENT` | chave de API do App Store Connect, já usada no upload do iOS e na notarização do `.dmg` | já existe, reaproveitado |
+
+Os `.p12`/`.provisionprofile` e os comandos `gh secret set` exatos estão em
+[imfxtech-chat-secrets-backup/macos-appstore/README.md](file:///home/marcelo/HD3/botDon/imfxtech-chat-secrets-backup/macos-appstore/README.md).
 
 ## Passos no Apple Developer / App Store Connect
 
-1. **Mac Installer Distribution:** Certificates, Identifiers & Profiles →
-   Certificates → "+" → **Mac Installer Distribution**. Só o **Account
-   Holder** cria. CSR igual ao dos outros certificados
-   (`docs/IOS_RELEASE_SIGNING.md`, passo 2) — pode ser outro par de chaves ou
-   reaproveitar o mesmo CSR do Apple Distribution, a Apple aceita o mesmo CSR
-   pra tipos de certificado diferentes.
-2. **Confirmar/habilitar macOS no App ID** `com.imfxtech.chat` (ver "Pontos a
-   confirmar" item 1).
-3. **Provisioning profile:** Profiles → "+" → **Mac App Store** (não
-   "Developer ID") → App ID `com.imfxtech.chat` → certificado Apple
-   Distribution do passo anterior (o mesmo usado no iOS). Baixar o
-   `.provisionprofile`.
-4. Salvar os 3 secrets novos da tabela acima.
+1. ~~Mac App Distribution~~ e ~~Mac Installer Distribution~~ — **feito**,
+   certificados gerados via CSR própria (não reaproveita a do iOS).
+2. ~~Confirmar/habilitar macOS no App ID~~ — **feito**, já estava habilitado.
+3. ~~Provisioning profile Mac App Store~~ — **feito**, "IMFxTech Chat macOS
+   App Store" gerado pra `com.imfxtech.chat` com o certificado Mac App
+   Distribution.
+4. Salvar os 5 secrets da tabela acima no GitHub (pendente — ver README da
+   pasta de backup).
 5. Em App Store Connect, adicionar a plataforma **macOS** à ficha existente
-   do app (ver "Pontos a confirmar" item 2) e preencher o Export Compliance
-   pra essa plataforma.
+   do app (ver "Pontos ainda em aberto" item 2) e preencher o Export
+   Compliance pra essa plataforma.
 
 ## Arquitetura
 
@@ -116,13 +135,13 @@ flowchart LR
         mac_dmg -. "opcional, não bloqueia" .-> rel
     end
     subgraph secrets["Repository secrets"]
-        s_app["IOS_CERTIFICATE_P12_BASE64<br/>reaproveitado"]
+        s_app["MACOS_APPSTORE_CERTIFICATE_P12_BASE64<br/>novo, dedicado"]
         s_inst["MACOS_INSTALLER_CERTIFICATE_P12_BASE64<br/>novo"]
         s_prof["MACOS_PROVISIONING_PROFILE_STORE_BASE64<br/>novo"]
         s_asc["ASC_KEY_ID, ASC_ISSUER_ID<br/>ASC_KEY_CONTENT"]
     end
     subgraph apple["Apple"]
-        portal["developer.apple.com<br/>Apple Distribution e Mac Installer Distribution"]
+        portal["developer.apple.com<br/>Mac App Distribution e Mac Installer Distribution"]
         asc["App Store Connect<br/>plataforma macOS do app"]
     end
     mac_store -.-> s_app
@@ -141,11 +160,11 @@ flowchart TD
     A["Checkout da tag vX.Y.Z"] --> B["Flutter + Rust arm64 e x86_64<br/>flutter pub get"]
     B --> C{"Secrets da loja<br/>configurados?"}
     C -- não --> Z["Aviso no log, job termina sem fazer nada"]
-    C -- sim --> D["Importa .p12 Apple Distribution<br/>e Mac Installer Distribution num keychain"]
+    C -- sim --> D["Importa .p12 Mac App Distribution<br/>e Mac Installer Distribution num keychain"]
     D --> E["Instala o profile Mac App Store"]
     E --> F["flutter build macos --release"]
     F --> G["Copia o profile para<br/>Contents/embedded.provisionprofile"]
-    G --> H["codesign com Apple Distribution<br/>Release.entitlements, hardened runtime"]
+    G --> H["codesign com Mac App Distribution<br/>Release.entitlements, hardened runtime"]
     H --> I["productbuild --sign Mac Installer Distribution<br/>gera o .pkg"]
     I --> J["xcrun altool upload-app --type macos<br/>com a API key ASC"]
     J --> K["upload-artifact: guarda o .pkg<br/>só para auditoria, não vai na Release"]
@@ -163,16 +182,16 @@ sequenceDiagram
     participant R as Revisor Apple
 
     rect rgb(235, 245, 255)
-    note over M,AP: Preparação única, manual
-    M->>AP: Account Holder cria Mac Installer Distribution
+    note over M,AP: Preparação única, manual — feita em 2026-11-06
+    M->>AP: Account Holder cria Mac App Distribution e Mac Installer Distribution
     M->>AP: Gera profile Mac App Store para com.imfxtech.chat
-    M->>GH: Salva os 3 secrets MACOS_INSTALLER_* e MACOS_PROVISIONING_PROFILE_STORE
+    M->>GH: Salva os 5 secrets MACOS_APPSTORE_*, MACOS_INSTALLER_* e MACOS_PROVISIONING_PROFILE_STORE
     end
 
     rect rgb(240, 255, 240)
     note over M,ASC: Execução, repetível
     M->>GH: workflow_dispatch com bump
-    GH->>GH: build-macos-store compila e assina o .app com Apple Distribution
+    GH->>GH: build-macos-store compila e assina o .app com Mac App Distribution
     GH->>GH: productbuild gera e assina o .pkg com Mac Installer Distribution
     GH->>ASC: xcrun altool upload-app --type macos
     ASC-->>GH: Build aceito, aparece em App Store Connect
